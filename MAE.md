@@ -23,6 +23,7 @@ U1───U2───U3                  main@upstream（fetch 自动前进；�
 
 - **并行隔离（最重要）**：多会话/多 agent 的任何写盘改动，先 `jj workspace add ../zcode-ws-<代号>`，在自己 workspace 里干活与交付；主树 `@` 只读停靠，进场发现 `@` 有非自己生产的内容 = 让位勿盖（jj 快照会把并行写入折进你的提交；2026-10-21 引导日即实踩：运行中的 ZCode 应用把 `apps/zcode-cli/**/dist-types/*.d.ts` 写出 EOL 幻影改动）。谁建谁清：`jj workspace forget <名>` + 删目录。
 - **交付三步**：`jj describe -m "<type>(<scope>): 中文描述"` → `jj bookmark create/move` → `jj git push --bookmark <名>`。**push 过的 change 视为只读**，续活先 `jj new` 起新票。
+- **PR 收账（GitHub squash 合入后）**：`jj git fetch` → `jj bookmark move mae --to mae@origin` → `jj new mae` 停靠。move 的必要性分两种：本地 `mae` 与旧 `mae@origin` 同位（PR 流下未提前动过 mae，待合工作放独立书签）→ fetch **自动快进**，move 只是幂等保险；本地 `mae` 已领先/分叉 → squash 合并产生"同树不同身份"的新提交（SHA 与 change-id 都不同），fetch 后两书签必然分叉，**必须显式 move 承认远端为准**——不 move 的后果：mae_custom() 读旧栈、下次 push 试图非快进覆盖远端合并结果（被安全检查挡住）、log 永远双位置。
 - **push 前两查**：`jj diff --stat` 文件集与预期一致（多出的文件 = 被并行折入，先 `jj split <paths>` 拆分再推）；`pnpm verify:pre-push` 手动跑——jj 不执行 git hooks，而本仓 **husky pre-push 已生效**：`git push` 逃生舱会触发它，且其中 `test:unit:affected` **拒绝脏工作区**（并行写入滞留时必被挡，2026-10-21 实锤；纯 ref 删除可 `git push --no-verify`）。
 - **rebase 前后两查**：前 `jj workspace update-stale`（stale 副本上 rebase 静默不生效）；后 `jj log -r @-` 回读父链确认落位。
 - **diff / 文件提取端点认 change-id 不认 git hash**（快照会重写 hash，拿旧 hash 会提出旧版内容）。
