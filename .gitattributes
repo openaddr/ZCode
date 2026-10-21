@@ -1,3 +1,12 @@
+# mae: 全仓文本恒 LF 入库、LF 落盘。根因：Windows core.autocrlf 检出 CRLF，而 jj 按原始
+# 字节快照，错位造成全树 15146 文件的 EOL 幻影 diff（2026-10-21 实锤）；eol=lf 让检出与
+# 快照同口径，本仓不再受 core.autocrlf 影响。jj 侧另有 working-copy.eol-conversion=input 双保险。
+* text=auto eol=lf
+
+# Windows 批处理按惯例必须 CRLF，豁免出 LF 基线
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
 # 保持脚本文件 LF 换行，避免 Windows CRLF 导致 shebang 解析失败
 *.mjs text eol=lf
 *.sh  text eol=lf
