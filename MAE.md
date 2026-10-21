@@ -2,7 +2,7 @@
 
 > 上游 `upstream` = zai-org/ZCode（main 由 Sync Bot **每日 squash 发布**，无细粒度历史，tag 如 v3.15.1 是稳定锚点）。
 > 本仓 `origin` = openaddr/ZCode，唯一主干 = **mae**。工具 = jj（colocated，`.jj` 与 `.git` 共存，git 仅作逃生舱）。
-> 模型：**mae = main@upstream + 定制提交栈（rebase 模式）**。本文件是 mae 栈的第一个提交，也是每次同步解冲突时的现场手册。
+> 模型：**mae = main@upstream + 定制提交栈（rebase 模式）**。本文件是同步解冲突的现场手册，也是全部命令配方的唯一事实源。
 
 ## 一、模型与铁律
 
@@ -21,7 +21,7 @@ U1───U2───U3                  main@upstream（fetch 自动前进；�
 
 ## 二、jj 纪律（0.45 实踩，借鉴 dafung-web「版本协作」经验）
 
-- **并行隔离（最重要）**：多会话/多 agent 的任何写盘改动，先 `jj workspace add ../zcode-ws-<代号>`，在自己 workspace 里干活与交付；主树 `@` 只读停靠，进场发现 `@` 有非自己生产的内容 = 让位勿盖（jj 快照会把并行写入折进你的提交；2026-10-21 引导日即实踩：运行中的 ZCode 应用把 `apps/zcode-cli/**/dist-types/*.d.ts` 写出 EOL 幻影改动）。谁建谁清：`jj workspace forget <名>` + 删目录。
+- **并行隔离（最重要）**：任何写盘改动先 `jj workspace add ../zcode-ws-<代号>` 开工作区，建后 `jj new mae` 起基（勿照主树停靠的 `@` 起基，它可能落后）；在 workspace 内干活与交付——workspace 无 `.git`，git/gh 命令需回主树或显式 `-R`/`-R openaddr/ZCode`。主树 `@` 只读停靠，发现 `@` 有非自己生产的内容 = 让位勿盖——jj 快照会把并行写入折进你的提交（本仓多次实锤）。谁建谁清：`jj workspace forget <名>` + 删目录。
 - **交付三步**：`jj describe -m "<type>(<scope>): 中文描述"` → `jj bookmark create/move` → `jj git push --bookmark <名>`。**push 过的 change 视为只读**，续活先 `jj new` 起新票。
 - **PR 收账（GitHub squash 合入后）**：`jj git fetch` → `jj bookmark move mae --to mae@origin` → `jj new mae` 停靠。move 的必要性分两种：本地 `mae` 与旧 `mae@origin` 同位（PR 流下未提前动过 mae，待合工作放独立书签）→ fetch **自动快进**，move 只是幂等保险；本地 `mae` 已领先/分叉 → squash 合并产生"同树不同身份"的新提交（SHA 与 change-id 都不同），fetch 后两书签必然分叉，**必须显式 move 承认远端为准**——不 move 的后果：mae_custom() 读旧栈、下次 push 试图非快进覆盖远端合并结果（被安全检查挡住）、log 永远双位置。
 - **push 前两查**：`jj diff --stat` 文件集与预期一致（多出的文件 = 被并行折入，先 `jj split <paths>` 拆分再推）；`pnpm verify:pre-push` 手动跑——jj 不执行 git hooks，而本仓 **husky pre-push 已生效**：`git push` 逃生舱会触发它，且其中 `test:unit:affected` **拒绝脏工作区**（并行写入滞留时必被挡，2026-10-21 实锤；纯 ref 删除可 `git push --no-verify`）。
@@ -76,7 +76,7 @@ jj log -r 'conflicts() & mae_custom()' # 列出带冲突的定制提交（无输
 # 解冲突：直接在工作副本改文件（jj 已物化 conflict 标记），保存即生效
 node scripts/check-workspace-freshness.mjs
 pnpm typecheck && pnpm lint            # 语义冲突（文本无冲突但构建挂）的唯一防线
-jj git push -B mae                     # 改写后的栈，jj 自动处理非快进推送
+jj git push -b mae                     # 改写后的栈，jj 自动处理非快进推送
 git push origin refs/remotes/upstream/main:refs/heads/main  # 建议顺手做：快进 fork 的 main 镜像
 ```
 
@@ -87,7 +87,7 @@ git push origin refs/remotes/upstream/main:refs/heads/main  # 建议顺手做：
 ```bash
 jj git fetch --remote upstream
 jj new mae main@upstream -m "mae: 切换为 merge 同步基线（upstream <短hash>）"
-jj bookmark move mae --to @ && jj git push -B mae
+jj bookmark move mae --to @ && jj git push -b mae
 # 此后每次同步 = 重复 jj new mae main@upstream（每个冲突区域解一遍最终态）
 ```
 
@@ -96,5 +96,5 @@ jj bookmark move mae --to @ && jj git push -B mae
 | 日期 | 文件/位置 | 类型 | 意图与要点 |
 | --- | --- | --- | --- |
 | 2026-10-21 | `MAE.md`（新增） | 手册 | 本文件：模型/jj 纪律/同步 runbook/定制登记 |
-| 2026-10-21 | `AGENTS.md`（改 1 行） | 指针 | 「核心原则」首行指向本文件，保证每个 agent 会话开工必读 |
+| 2026-10-21 | `AGENTS.md`（改，「核心原则」首条） | 铁律内联 | 三条铁律（工作区/书签+PR/定制隔离）内联+指向本文件；上游若改此文件，同步时整块重放 |
 | 2026-10-21 | `.gitattributes`（改，首部 7 行） | 口径 | 全仓文本恒 LF + `.bat/.cmd` CRLF 豁免；根因与双保险见 MAE.md「EOL 口径」 |
