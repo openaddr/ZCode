@@ -5,7 +5,9 @@ import {
   formatAboutCopyright,
   formatAboutDetail,
   formatAboutOptimizationLine,
+  formatUpstreamBaseLine,
 } from "../src/main/about.js";
+import { createCustomAboutDialogHtml } from "../src/main/aboutWindow.js";
 
 describe("about", () => {
   const appleSiliconSnapshot = createAboutSnapshot({
@@ -79,5 +81,61 @@ describe("about", () => {
   it("版权年份可按调用方传入覆盖", () => {
     expect(formatAboutCopyright(2027, "en-US")).toBe("Copyright © 2027 ZCode.");
     expect(formatAboutCopyright(2027, "zh-CN")).toBe("版权所有 © 2027 ZCode。");
+  });
+
+  it("mae: 快照携带上游基线,缺失时回落 unknown", () => {
+    // mae: 关于页双信息(#11)——ZCode Mae <version> · 基于 ZCode <upstreamBase>
+    const withBase = createAboutSnapshot({
+      appVersion: "2026.1022.0",
+      buildMetadata: {
+        appVersion: "2026.1022.0",
+        buildCommitId: "abc1234",
+        buildTime: "2026-10-22T10:20:30.000Z",
+        upstreamBase: "3.16.2",
+        upstreamBaseCommit: "3c5b2276",
+      },
+    });
+    expect(withBase.upstreamBase).toBe("3.16.2");
+    expect(withBase.upstreamBaseCommit).toBe("3c5b2276");
+    expect(formatAboutDetail(withBase)).toContain("Upstream Base: 3.16.2");
+
+    const withoutBase = createAboutSnapshot({ appVersion: "2026.1022.0" });
+    expect(withoutBase.upstreamBase).toBe("unknown");
+  });
+
+  it("mae: 上游基线展示行按语言生成,unknown 时留空", () => {
+    const snapshot = createAboutSnapshot({
+      appVersion: "2026.1022.0",
+      buildMetadata: { appVersion: "2026.1022.0", upstreamBase: "3.16.2" },
+    });
+    expect(formatUpstreamBaseLine(snapshot.upstreamBase, "zh-CN")).toBe("基于 ZCode 3.16.2");
+    expect(formatUpstreamBaseLine(snapshot.upstreamBase, "en-US")).toBe("Based on ZCode 3.16.2");
+
+    const unknownSnapshot = createAboutSnapshot({ appVersion: "2026.1022.0" });
+    expect(formatUpstreamBaseLine(unknownSnapshot.upstreamBase, "zh-CN")).toBe("");
+  });
+
+  it("mae: 关于弹窗渲染上游基线行,空行时不渲染", () => {
+    const html = createCustomAboutDialogHtml({
+      applicationName: "ZCode Mae",
+      appVersion: "2026.1022.0",
+      copyright: "版权所有 © 2026 ZCode。",
+      optimizationLine: "",
+      versionLabel: "版本",
+      okButtonLabel: "确定",
+      upstreamBaseLine: "基于 ZCode 3.16.2",
+    });
+    expect(html).toContain("基于 ZCode 3.16.2");
+
+    const htmlWithoutBase = createCustomAboutDialogHtml({
+      applicationName: "ZCode Mae",
+      appVersion: "2026.1022.0",
+      copyright: "版权所有 © 2026 ZCode。",
+      optimizationLine: "",
+      versionLabel: "版本",
+      okButtonLabel: "确定",
+      upstreamBaseLine: "",
+    });
+    expect(htmlWithoutBase).not.toContain("基于 ZCode");
   });
 });
