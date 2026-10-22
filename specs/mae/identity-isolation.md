@@ -34,6 +34,8 @@
 
 > 落地记录(2026-10-22,#9):数据根挂接落点为 `desktopDataBaseDirBootstrap.ts` 而非原列 index.ts——index.ts 顶部 `desktopEarlyDataBaseDirBootstrap.js` 副作用 import 使前者才是启动 import 链中最早的 dataBaseDir 触点,index.ts 函数体注入为时已晚(bootstrap setting.json 会先按官方 `~/.zcode` 解析)。该挂接三件事:启动早期 `setDataBaseDir(~/.zcode-mae)`(经 paths.ts 编程接口,优先级高于 env)、bootstrap setting.json 默认路径同根切到 `~/.zcode-mae/.zcode/v2/setting.json`、注入 `ZCODE_DESKTOP_HOME_DIR=~/.zcode-mae`(settingService 的 home 覆盖轴,主进程与 host 子进程的 setting.json 均落 mae 根,经 buildHostProcessEnv 现有继承机制透传)。决策函数在 mae-identity.mjs(`resolveMaeDataRootBootstrap`):显式 `ZCODE_DATA_BASE_DIR` 为保留覆盖轴(上游 e2e wdio 与 CLI 调试依赖它重定向,mae 不劫持);官方身份返回 null 完全保留上游语义。desktopRuntimeEnv.ts 开发态 helper 兜底 mae 化(显式 ZCODE_HOME 仍优先)。遗留:services 侧 commands/hooks/mcp-sync 的用户级目录(`~/.zcode/commands`、`~/.zcode/cli/config.json`、hooks)仍按真实 HOME 解析(上游与 CLI 对等的设计),彻底收敛待后续票。
 
+> 落地记录(2026-10-22,#10):scheme 常量 `zcode-mae` 落点定为 `packages/shared/src/mae/deeplinkScheme.mjs`(+手写 .d.mts,经 index.ts 公共入口再导出)——原候选 mae-identity.mjs 因 shared/web 无法跨包导入 desktop/scripts 而排除;electron-builder.config.js(Node 构建脚本)直接 import 该 .mjs,与 TS 消费方共用同一份常量。六消费方 + 枚举外第 7 处(desktopOAuthDeepLink 运行期 setAsDefaultProtocolClient,不换会劫持官方协议)已统一切换;Linux desktop 文件名随 scheme 隔离为 `zcode-mae.desktop`。遗留:services OAuth provider redirect URI(`zcode://oauth/callback`)随 account-login gate 关闭,未随本票切换;Linux desktop entry `Icon=zcode` 图标命名与官方共名。
+
 ## 守卫与测试
 
 - 新增单测文件(纯新增,rebase 不可冲掉):断言默认 flavor = mae;断言未设授权 env 时解析官方身份抛错。挂接被 rebase 冲掉时该测试变红,即"防丢网"。

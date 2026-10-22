@@ -54,7 +54,7 @@ describe("失效 OAuth 回调", () => {
     });
     // 只挂载回调订阅；启动恢复和轮询在各自测试中验证。
     effects.at(-1)!();
-    await callback("zcode://oauth/callback?state=cancelled");
+    await callback("zcode-mae://oauth/callback?state=cancelled");
     expect(errorLog).not.toHaveBeenCalled();
     expect(setUser).not.toHaveBeenCalled();
     expect(setOAuthError).not.toHaveBeenCalled();
@@ -180,7 +180,7 @@ describe("OAuth 成功后的真实设置 CAS", () => {
         poll();
       } else {
         effects.at(-1)!();
-        await callback("zcode://oauth/callback?state=test");
+        await callback("zcode-mae://oauth/callback?state=test");
       }
       await vi.waitFor(() => expect(markOAuthSuccess).toHaveBeenCalledWith("bigmodel"));
       expect(setUser).toHaveBeenCalledWith(result.userInfo);

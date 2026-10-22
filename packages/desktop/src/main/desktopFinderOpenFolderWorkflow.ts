@@ -3,6 +3,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import type { Locale } from "@zcode/shared";
+// mae: Finder 服务打开的深链接走自有 zcode-mae scheme(隐蔽消费方,漏改静默失效,#10)
+import { MAE_DEEP_LINK_SCHEME } from "@zcode/shared/mae";
 
 const WORKFLOW_NAME = "Open in ZCode.workflow";
 const WORKFLOW_BUNDLE_ID = "dev.zcode.app.finder-open-workflow";
@@ -22,7 +24,7 @@ done
 
 if [ -n "$first" ]; then
   encoded=$(/usr/bin/osascript -l JavaScript -e 'function run(argv) { return encodeURIComponent(argv[0]); }' "$first")
-  /usr/bin/open "zcode://workspace/open?path=\${encoded}"
+  /usr/bin/open "${MAE_DEEP_LINK_SCHEME}://workspace/open?path=\${encoded}"
 fi
 `;
 

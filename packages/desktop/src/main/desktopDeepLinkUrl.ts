@@ -1,5 +1,8 @@
-const DEEP_LINK_SCHEME = "zcode";
-const DEEP_LINK_RE = /\bzcode:(?:\/\/|\/)?[^\s"'<>]+/i;
+// mae: 深链接 scheme 换自有 zcode-mae——官方 zcode:// 不再被 mae 解析(#10,specs/mae/identity-isolation.md)
+import { MAE_DEEP_LINK_SCHEME } from "@zcode/shared/mae";
+
+const DEEP_LINK_SCHEME = MAE_DEEP_LINK_SCHEME;
+const DEEP_LINK_RE = new RegExp(`\\b${DEEP_LINK_SCHEME}:(?:\\/\\/|\\/)?[^\\s"'<>]+`, "i");
 const OAUTH_CALLBACK_HOSTS = new Set(["oauth"]);
 const PAYMENT_CALLBACK_HOST = "payment";
 const WORKSPACE_OPEN_HOST = "workspace";
