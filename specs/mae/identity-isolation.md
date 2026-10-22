@@ -14,7 +14,7 @@
 
 - 新增 `packages/desktop/scripts/mae-identity.mjs`(+ 手写 `mae-identity.d.mts`):构建期与运行期**共用**的身份模块——身份常量、默认翻转逻辑、授权守卫、运行名链的唯一出口(与上游 `desktop-product-identity.mjs`「构建脚本与 main 进程共用 ESM」同一模式;架构治理要求 `packages/desktop/src` 下新 `.ts` 走模块 adopt 五件套,故运行期暂不另设 `src/main/mae/`,待 #9/#10 落地数据根/scheme 时再评估 adopt)。数据根、scheme 常量属后续票,仍在本模块或其派生模块内收敛。
 - 开发态 AUMID 为 `dev.zcode-mae.app.dev`:与官方开发态 `cn.aminer.zcode`、mae 打包态 appId 三方互不混淆。
-- 上游文件只做 ≤10 行挂接(委托 mae 模块),每处加 `// mae:` 标记并登记 MAE.md「五」。
+- 上游文件只做 ≤10 行挂接(委托 mae 模块),每处加 `// mae:` 标记并登记 docs/mae/customization-registry.md。
 
 ### 挂接点清单(实现时逐处登记)
 
