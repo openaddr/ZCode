@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { tsImport } from "tsx/esm/api";
 
 /**
  * 桌面构建期可选能力的唯一解析入口：ARMS RUM 上报、事件上报、自动更新。
@@ -38,13 +40,22 @@ export async function resolveBuildTimeConfig(
   { defaultsPath = PRIVATE_BUILD_DEFAULTS_PATH } = {},
 ) {
   const defaults = await readPrivateDefaults(defaultsPath);
-  return {
+  const config = {
     armsRumEndpoint: pickValue(env, defaults, "ZCODE_ARMS_RUM_ENDPOINT"),
     telemetryReportEndpoint: pickValue(env, defaults, "ZCODE_TELEMETRY_REPORT_ENDPOINT"),
     autoUpdateEnabled: ENABLED_VALUES.has(
       pickValue(env, defaults, "ZCODE_AUTO_UPDATE").toLowerCase(),
     ),
   };
+  // mae: 外联静默——遥测端点置空(框架保留,空端点=ARMS/事件上报关闭);官方身份显式授权时保留(#7)
+  const { isMaeExternalSilenceEnabled } = await tsImport(
+    pathToFileURL(
+      resolve(import.meta.dirname, "../packages/shared/src/mae/externalSilence.ts"),
+    ).href,
+    import.meta.url,
+  );
+  if (!isMaeExternalSilenceEnabled(env)) return config;
+  return { ...config, armsRumEndpoint: "", telemetryReportEndpoint: "" };
 }
 
 export function createBuildTimeConfigDefines(config) {

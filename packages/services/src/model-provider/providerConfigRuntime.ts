@@ -5,6 +5,7 @@ import {
   type PersonalProviderConfigRecoveryEvent,
   type NodeProviderConfigRuntimeOptions,
 } from "@zcode/provider-node";
+import { isMaeExternalSilenceEnabled } from "@zcode/shared/mae"; // mae: 外联静默——切断官方目录后台刷新(#7)
 import type { ModelProviderConfig } from "./legacyModelProviderSerialized.js";
 import { getAppConfigDir } from "../paths.js";
 import { importLegacyPersonalProviderConfig } from "./legacyPersonalProviderConfigImporter.js";
@@ -32,11 +33,17 @@ export class ProviderConfigRuntime {
   readonly #runtime: NodeProviderConfigRuntime;
 
   constructor(options: ProviderConfigRuntimeOptions) {
+    // mae: 外联静默——默认丢弃远端装配,仅用打包目录(无下载、无周期检查);官方身份显式授权时保留原链路
+    const maeSilent = isMaeExternalSilenceEnabled();
     const runtimeOptions: NodeProviderConfigRuntimeOptions = {
       zcodeBuiltinFilePath: options.zcodeBuiltinFilePath,
       zcodeBuiltinActiveFilePath: options.zcodeBuiltinActiveFilePath,
-      zcodeBuiltinRemote: options.zcodeBuiltinRemote,
-      zcodeBuiltinEnvironment: options.zcodeBuiltinEnvironment,
+      ...(maeSilent
+        ? {}
+        : {
+            zcodeBuiltinRemote: options.zcodeBuiltinRemote,
+            zcodeBuiltinEnvironment: options.zcodeBuiltinEnvironment,
+          }),
       onZCodeBuiltinRefreshError: options.onZCodeBuiltinRefreshError,
       onPersonalConfigRecovery: options.onPersonalConfigRecovery,
       onPersonalConfigPollingError: options.onPersonalConfigPollingError,

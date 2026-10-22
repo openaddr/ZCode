@@ -26,6 +26,7 @@ import {
   type SourceServerArtifactPolicy,
   type ZCodeRuntimeEnv,
 } from "@zcode/shared";
+import { isMaeExternalSilenceEnabled } from "@zcode/shared/mae"; // mae: 外联静默——OTLP 定向注入默认置空(#7)
 import { resolvePlatformKeyForPackagedApp } from "../../scripts/target-platform.mjs";
 import {
   getAppConfigDir,
@@ -531,6 +532,10 @@ export function buildHostProcessEnv(hostProcessLocalEnv: Record<string, string>)
           : undefined;
   const windowsAppInstallDir = resolveWindowsAppInstallDirForDataBaseDirGuard();
   const agentTelemetryEnv = readZCodeAgentTelemetryEnv(rawInheritedEnv);
+  // mae: 外联静默——默认清空 OTLP 定向注入,host/Agent 遥测落入 Noop(框架保留,数据不出本机)(#7)
+  const maeSilentTelemetryEnv = isMaeExternalSilenceEnabled()
+    ? {}
+    : agentTelemetryEnv;
   // Desktop 身份由 host 从凭据仓库和本机状态读取后可信注入；外部环境只能配置 OTLP 连接，
   // 不能伪造 uid/device/runtime surface 或绕过本地 identity state 的隔离边界。
   for (const key of [
@@ -566,7 +571,8 @@ export function buildHostProcessEnv(hostProcessLocalEnv: Record<string, string>)
     ...inheritedEnv,
     // OTLP 凭据只定向传到 host；host 初始化 services 时会立即捕获并从 process.env 清除，
     // 后续只在启动 Agent 时短暂注入，不会进入 Bash/MCP/tool env。
-    ...agentTelemetryEnv,
+    // mae: 静默时为空对象,继承环境里的 OTLP 键已在 sanitize 阶段剔除(#7)
+    ...maeSilentTelemetryEnv,
     // ZCode 运行时不再使用 NODE_ENV；它会被用户 shell、包管理器和测试框架复用。
     // 这里显式下发 ZCODE_RUNTIME_ENV，并在继承环境里清掉 NODE_ENV，避免 host/agent/Bash 被污染。
     [ZCODE_RUNTIME_ENV_KEY]: resolveHostProcessNodeEnv(),
