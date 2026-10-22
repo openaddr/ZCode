@@ -607,8 +607,15 @@ export function buildHostProcessEnv(hostProcessLocalEnv: Record<string, string>)
     [ZCODE_BUILD_COMMIT_ID_ENV]: ZCODE_COMMIT,
     ...(dataBaseDir !== homedir() ? { ZCODE_DATA_BASE_DIR: dataBaseDir } : {}),
     // mae: 注入 CLI 存储根环境变量(mae 数据根)——Agent 侧 exec 输出/剪贴板/SEA 运行时/插件与技能存储
-    // 已读 ZCODE_STORAGE_DIR,随轴落 mae 树(#24);官方身份不注入,保留上游 ~/.zcode 语义
-    ...(ZCODE_PRODUCT_FLAVOR === "mae" ? { ZCODE_STORAGE_DIR: getZCodeDataRootDir() } : {}),
+    // 已读 ZCODE_STORAGE_DIR,随轴落 mae 树(#24);官方身份不注入,保留上游 ~/.zcode 语义。
+    // 会话 DB(内嵌 agent 每次启动 open 的 SqliteSessionStore)不吃存储根变量,
+    // 单独注入其 env 覆盖轴(env-config.adapter 的 SESSION_DB_PATH),防 sqlite 版本错位互踩(#24 核实结论)。
+    ...(ZCODE_PRODUCT_FLAVOR === "mae"
+      ? {
+          ZCODE_STORAGE_DIR: getZCodeDataRootDir(),
+          ZCODE_SESSION_DB_PATH: join(getZCodeDataRootDir(), "cli", "db", "db.sqlite"),
+        }
+      : {}),
     ...(windowsAppInstallDir ? { [ZCODE_WINDOWS_APP_INSTALL_DIR_ENV]: windowsAppInstallDir } : {}),
     ...(bundledCuaHelperAppPath
       ? { [ZCODE_CUA_BUNDLED_HELPER_APP_PATH_ENV]: bundledCuaHelperAppPath }

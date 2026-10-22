@@ -57,7 +57,7 @@ const servicesPathMock = {
 };
 
 const originalEnv: Record<string, string | undefined> = {};
-const MANAGED_ENV_KEYS = ["HOME", "USERPROFILE", "ZCODE_STORAGE_DIR"];
+const MANAGED_ENV_KEYS = ["HOME", "USERPROFILE", "ZCODE_STORAGE_DIR", "ZCODE_SESSION_DB_PATH"];
 
 function snapshotManagedEnv() {
   for (const key of MANAGED_ENV_KEYS) {
@@ -126,6 +126,9 @@ describe("host 存储根注入(buildHostProcessEnv)", () => {
     const env = buildHostProcessEnv({});
 
     expect(env.ZCODE_STORAGE_DIR).toBe("/Users/mae-tester/.zcode-mae/.zcode");
+    expect(env.ZCODE_SESSION_DB_PATH?.replaceAll("\\", "/")).toBe(
+      "/Users/mae-tester/.zcode-mae/.zcode/cli/db/db.sqlite",
+    );
   });
 
   it("mae 身份:注入值优先于继承环境里的用户自定义 ZCODE_STORAGE_DIR(mae 数据根是权威)", async () => {
