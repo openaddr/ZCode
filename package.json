@@ -1,6 +1,6 @@
 {
   "name": "zcode",
-  "version": "3.16.2",
+  "version": "2026.1022.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -66,7 +66,7 @@
     "lint:fix": "oxlint --fix --fix-suggestions",
     "bootstrap": "node scripts/bootstrap.mjs",
     "bootstrap:with-remote": "node scripts/bootstrap.mjs --with-remote",
-    "release": "release-it",
+    "release": "node scripts/mae/release-calver.mjs",
     "release:cli": "pnpm --dir apps/zcode-cli run release",
     "release:cli:dry": "pnpm --dir apps/zcode-cli run release:dry",
     "architecture:check": "node scripts/architecture/architecture-check.mjs check",

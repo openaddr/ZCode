@@ -119,6 +119,8 @@ export default defineConfig({
             "packages/services/src/gen-ui/**/*.test.ts",
             "scripts/assert-safe-cua-helper-zip.test.mjs",
             "scripts/ci/ci-telemetry-keyword-guard.test.mjs",
+            // mae: CalVer 版本语义单测(#11)——scripts/mae 属 mae 定制目录,需显式纳入 vitest
+            "scripts/mae/**/*.test.mjs",
           ],
           exclude: ["packages/desktop/test/e2e/**", "packages/zcode-cua/**", ...forkIsolatedTests],
           // Node 24/macOS 的 threads 全量运行可触发 V8 SIGSEGV；诊断时切换进程隔离，测试范围不变。
