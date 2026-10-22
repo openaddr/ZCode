@@ -24,6 +24,8 @@ import { renderOAuthProviderIcon } from "./lib/oauthProviderIcon.js";
 import { ThemeHeroVisual } from "./openWorkspacePageThemeHero.js";
 import { useZCodeStore } from "./store/StoreProvider.js";
 import { DesktopOverlayWindowControls } from "@/DesktopOverlayWindowControls.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureDisabled } from "@/mae/featureGates.js";
 
 interface WelcomeScreenProps {
   onComplete: (reason: LoginCompleteReason) => void | Promise<void>;
@@ -538,6 +540,8 @@ function getProviderPriority(provider: OAuthProviderMeta): number {
 }
 
 export function resolveVisibleLoginProviders(providers: OAuthProviderMeta[]): OAuthProviderMeta[] {
+  // mae: D7 纯本地模式——账号 OAuth 登录渠道隐藏,登录入口仅保留 API Key 方式(#6)
+  if (isFeatureDisabled("account-login")) return [];
   // Bugfix: ZAI / BigModel 现在共享 App 登录事实源，未登录时登录入口必须同时展示两个入口。
   // 旧逻辑曾临时隐藏 BigModel，导致用户无法主动选择 BigModel 作为 active provider。
   return [...providers].sort((left, right) => {

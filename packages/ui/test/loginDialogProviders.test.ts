@@ -21,6 +21,7 @@ function createProvider(
 }
 
 describe("resolveVisibleLoginProviders", () => {
+  // mae: D7 纯本地模式——账号 OAuth 登录渠道被 feature gate 隐藏,登录入口仅保留 API Key(#6)
   it("未登录弹窗同时展示 ZAI 和 BigModel 入口", () => {
     const providers = resolveVisibleLoginProviders([
       createProvider({
@@ -35,10 +36,7 @@ describe("resolveVisibleLoginProviders", () => {
       }),
     ]);
 
-    expect(providers.map((provider) => provider.id)).toEqual([
-      ZAI_PROVIDER_ID,
-      BIGMODEL_PROVIDER_ID,
-    ]);
+    expect(providers).toEqual([]);
   });
 });
 

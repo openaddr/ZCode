@@ -50,6 +50,14 @@ vi.mock("@/settings/CodingPlanUpgradeDialog.js", () => ({
   },
 }));
 
+// mae: D7 纯本地模式——套餐升级被 gate 禁用(#6);本文件验证弹窗打开逻辑本身,显式放开
+vi.mock("@/mae/featureGates.js", async () => {
+  const actual = await vi.importActual<typeof import("@/mae/featureGates.js")>(
+    "@/mae/featureGates.js",
+  );
+  return { ...actual, isFeatureVisible: () => true, isFeatureDisabled: () => false };
+});
+
 import {
   CodingPlanUpgradeDialogProvider,
   useCodingPlanUpgradeDialog,

@@ -6,6 +6,8 @@ import type { WorkspaceHeaderActionSectionProps } from "@/WorkspaceHeaderSection
 import { WorkspaceHelpMenuButton } from "@/WorkspaceHelpMenuButton.js";
 import { ConversationShareMenu } from "@/ConversationShareMenu.js";
 import { DesktopWindowControls } from "@/DesktopWindowControls.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 
 export type { WorkspaceHeaderActionSectionProps } from "@/WorkspaceHeaderSections/shared.js";
 
@@ -49,10 +51,12 @@ export function WorkspaceHeaderActionSection({
         />
       ) : null}
       {/* 分享发布接口依赖登录态；未登录时隐藏入口，避免用户打开后只能得到鉴权失败。 */}
+      {/* mae: D7 纯本地模式——会话分享发布入口随 gate 隐藏(#6) */}
       {activeTaskId &&
       user &&
       isDesktop !== false &&
       !isWebRemoteControl &&
+      isFeatureVisible("session-share") &&
       remoteTarget?.kind !== "server" ? (
         <ConversationShareMenu
           taskId={activeTaskId}

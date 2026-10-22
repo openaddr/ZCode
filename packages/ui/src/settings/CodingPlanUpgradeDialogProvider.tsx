@@ -19,6 +19,8 @@ import {
 } from "@/hooks/useCodingPlanEntryPlanList.js";
 import { usePlatform } from "@/hooks/usePlatform.js";
 import { reportCodingPlanUpgradeClick } from "@/lib/codingPlanFunnelTelemetry.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureDisabled } from "@/mae/featureGates.js";
 
 interface CodingPlanUpgradeDialogContextValue {
   inventory: CodingPlanEntryInventory;
@@ -47,6 +49,8 @@ export function CodingPlanUpgradeDialogProvider({ children }: { children: ReactN
       nextTarget: CodingPlanUpgradeDialogTarget,
       observation?: { signal: AbortSignal; onResult: (opened: boolean) => void },
     ) => {
+      // mae: D7 纯本地模式——套餐升级弹窗全入口禁用(#6)
+      if (isFeatureDisabled("coding-plan")) return false;
       // 所有入口统一守卫；查询完成后不自动重放之前被拦截的点击。
       const { status, entryPlanList } = inventoryRef.current;
       if (observation?.signal.aborted) return false;

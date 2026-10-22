@@ -18,6 +18,8 @@ import {
   isShareImportUrl,
 } from "./desktopDeepLinkUrl.js";
 import { registerLinuxDeepLinkProtocol } from "./desktopLinuxDeepLinkRegistration.js";
+// mae: D7 纯本地模式——feature gate(main 侧对应物)的消费点(#6)
+import { isDesktopFeatureDisabled } from "./mae/featureGates.js";
 
 interface DeepLinkWorkspaceGateOptions {
   canOpenWorkspace?: (workspacePath: string) => boolean;
@@ -315,7 +317,8 @@ export function handleDeepLink(
     return false;
   }
 
-  if (isShareImportUrl(parsedUrl)) {
+  // mae: D7 纯本地模式——会话分享导入深链接入口随 gate 忽略(#6)
+  if (!isDesktopFeatureDisabled("session-share") && isShareImportUrl(parsedUrl)) {
     const shareCode = extractShareImportCode(parsedUrl);
     if (!shareCode) {
       logger.warn("[deep-link] share import code 无效，已忽略", {

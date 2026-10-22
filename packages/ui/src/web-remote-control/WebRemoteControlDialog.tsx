@@ -37,6 +37,8 @@ import { useOAuth } from "@/hooks/useOAuth.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { logger } from "@/logger.js";
 import { getBotProviderRegionTagLabelId } from "@/botsUi.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 
 type RemoteControlBotProvider = Extract<BotProvider, "weixin" | "feishu" | "lark" | "telegram">;
 
@@ -596,19 +598,22 @@ export const WebRemoteControlDialog = memo(function WebRemoteControlDialogCompon
                   })}
                 </div>
                 <div className="mt-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    data-testid="web-remote-control-open-bots"
-                    className="w-full justify-center gap-2 enabled:cursor-pointer"
-                    onClick={handleOpenBotsDialog}
-                  >
-                    <BotIcon className="size-3.5" />
-                    {intl.formatMessage({
-                      id: "webRemoteControl.botChannel.manageBots",
-                    })}
-                  </Button>
+                  {/* mae: D7 纯本地模式——Bots 管理入口随 gate 隐藏(#6) */}
+                  {isFeatureVisible("bots") ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      data-testid="web-remote-control-open-bots"
+                      className="w-full justify-center gap-2 enabled:cursor-pointer"
+                      onClick={handleOpenBotsDialog}
+                    >
+                      <BotIcon className="size-3.5" />
+                      {intl.formatMessage({
+                        id: "webRemoteControl.botChannel.manageBots",
+                      })}
+                    </Button>
+                  ) : null}
                 </div>
               </section>
             </div>

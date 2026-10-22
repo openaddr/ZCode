@@ -114,10 +114,11 @@ afterEach(() => {
 });
 
 describe("WorkspaceWebRemoteControlTrigger", () => {
-  it("默认展示 Web 远程控制入口", async () => {
+  // mae: D7 纯本地模式——手机远控入口默认随 feature gate 隐藏(#6);组件自身行为仍以显式注入验证
+  it("mae gate 默认隐藏 Web 远程控制入口", async () => {
     const html = await renderTriggerWithEnv("production");
 
-    expect(html).toContain("webRemoteControl.trigger");
+    expect(html).not.toContain("webRemoteControl.trigger");
   });
 
   it("允许 root wiring 显式注入 Web 远程控制入口能力", async () => {
@@ -131,6 +132,7 @@ describe("WorkspaceWebRemoteControlTrigger", () => {
   it("把当前 active task 作为 Web 远程控制初始 task 传给弹层", async () => {
     const html = await renderTriggerWithEnv("test", {
       initialTaskId: "task-from-desktop",
+      featureEnabled: true,
     });
 
     expect(html).toContain('data-initial-task-id="task-from-desktop"');
@@ -142,6 +144,7 @@ describe("WorkspaceWebRemoteControlTrigger", () => {
     const html = await renderTriggerWithEnv("test", {
       workspaceIdentity: "remote:ssh:localhost:2222:root:/tmp/project",
       remoteSessionId: "stale-session",
+      featureEnabled: true,
     });
 
     expect(resolvedRemoteSessionIdMock).toHaveBeenCalledWith(
@@ -154,7 +157,9 @@ describe("WorkspaceWebRemoteControlTrigger", () => {
   });
 
   it("把入口名称和手机连接状态合并到同一个 tooltip", async () => {
-    const html = await renderTriggerWithEnv("test");
+    const html = await renderTriggerWithEnv("test", {
+      featureEnabled: true,
+    });
 
     expect(html).toContain('data-tooltip-title="webRemoteControl.trigger"');
     expect(html).toContain('data-tooltip-description="webRemoteControl.triggerStatus.idle"');

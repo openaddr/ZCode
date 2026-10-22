@@ -82,7 +82,7 @@ describe("createQuickPickCommands", () => {
       "switch-theme",
       "skills-settings",
       "mcp-settings",
-      "feedback",
+      // mae: D7 纯本地模式——问题上报命令被 feature gate 隐藏(#6)
       "community",
       "product-docs",
       "login",

@@ -33,6 +33,8 @@ import { usePlatform } from "@/hooks/usePlatform.js";
 import { useVulnerabilityReportUrl } from "@/hooks/useVulnerabilityReportUrl.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { createHelpMenuActionHandlers } from "@/lib/helpMenuActions.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 
 export function WorkspaceHelpMenuButton({
   className,
@@ -103,10 +105,13 @@ export function WorkspaceHelpMenuButton({
           <UsersIcon className="size-4" />
           {intl.formatMessage({ id: "workspaceHeader.help.community" })}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={helpMenuActions.openIssueReport}>
-          <MessageSquareIcon className="size-4" />
-          {intl.formatMessage({ id: "workspaceHeader.help.issueReport" })}
-        </DropdownMenuItem>
+        {/* mae: D7 纯本地模式——问题上报入口随 gate 隐藏(#6) */}
+        {isFeatureVisible("feedback") ? (
+          <DropdownMenuItem onSelect={helpMenuActions.openIssueReport}>
+            <MessageSquareIcon className="size-4" />
+            {intl.formatMessage({ id: "workspaceHeader.help.issueReport" })}
+          </DropdownMenuItem>
+        ) : null}
         {vulnerabilityReportLoading || vulnerabilityReportUrl ? (
           <DropdownMenuItem
             disabled={vulnerabilityReportLoading}
@@ -121,10 +126,13 @@ export function WorkspaceHelpMenuButton({
             {intl.formatMessage({ id: "workspaceHeader.help.reportVulnerability" })}
           </DropdownMenuItem>
         ) : null}
-        <DropdownMenuItem onSelect={openFeatureRequest}>
-          <LightbulbIcon className="size-4" />
-          {intl.formatMessage({ id: "workspaceHeader.help.productRequest" })}
-        </DropdownMenuItem>
+        {/* mae: D7 纯本地模式——功能建议入口随 gate 隐藏(#6) */}
+        {isFeatureVisible("feedback") ? (
+          <DropdownMenuItem onSelect={openFeatureRequest}>
+            <LightbulbIcon className="size-4" />
+            {intl.formatMessage({ id: "workspaceHeader.help.productRequest" })}
+          </DropdownMenuItem>
+        ) : null}
         {/* Windows/Linux 没有原生菜单栏，自绘标题栏箭头菜单也已下线，
             资源管理器只能从这里进；Web 端没有该窗口，不渲染。 */}
         {isDesktop ? (

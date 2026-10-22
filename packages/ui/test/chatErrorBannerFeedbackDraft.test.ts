@@ -29,6 +29,14 @@ vi.mock("@/components/ui/toast.js", () => ({
   toast: vi.fn(),
 }));
 
+// mae: D7 纯本地模式——反馈入口被 gate 隐藏(#6);本文件验证“入口可用时”的草稿构建行为,故显式放开
+vi.mock("@/mae/featureGates.js", async () => {
+  const actual = await vi.importActual<typeof import("@/mae/featureGates.js")>(
+    "@/mae/featureGates.js",
+  );
+  return { ...actual, isFeatureVisible: () => true, isFeatureDisabled: () => false };
+});
+
 const mockPlatform = {
   captureWindowScreenshot: vi.fn(async () => null),
 } as unknown as IPlatformService;

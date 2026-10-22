@@ -21,6 +21,13 @@ vi.mock("@/i18n/IntlProvider.js", () => ({ useZCodeIntl: () => ({ locale: "en-US
 vi.mock("@/rewards/RewardsWebview.js", () => ({
   RewardsWebview: () => createElement("div", { "data-testid": "rewards-view" }),
 }));
+// mae: D7 纯本地模式——奖励中心入口被 gate 隐藏(#6);本文件验证 provider 自身逻辑,显式放开
+vi.mock("@/mae/featureGates.js", async () => {
+  const actual = await vi.importActual<typeof import("@/mae/featureGates.js")>(
+    "@/mae/featureGates.js",
+  );
+  return { ...actual, isFeatureVisible: () => true, isFeatureDisabled: () => false };
+});
 
 function Trigger() {
   const open = useOpenRewards();
