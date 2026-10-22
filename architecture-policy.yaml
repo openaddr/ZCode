@@ -893,3 +893,11 @@ exceptions:
       - packages/ui/src/settings/DynamicWorkflowModeSetting.tsx
       - packages/ui/src/store/dynamicWorkflowAvailabilityStore.ts
     reason: Admitted upstream files edited only to let the user's dynamic workflow mode choice always win and keep the settings row visible; adopting packages/shared/src and packages/ui/src needs a separate module boundary refactor.
+  # mae: D7 纯本地模式 feature gates(#6)——gate 模块新增目录与上游 introduced 文件薄改
+  - id: mae-feature-gates-unmanaged-files
+    rule: unmanaged-new-file
+    paths:
+      - packages/ui/src/mae/
+      - packages/desktop/src/main/mae/
+      - packages/ui/src/components/marketing-touch/MarketingTouchProvider.tsx
+    reason: mae fork 定制(specs/mae/feature-gates.md):packages/ui/src/mae 与 packages/desktop/src/main/mae 是 feature gate 禁用清单的唯一所有者(纯新增、静态清单,上游 ui/desktop 模块为 legacy 非受管,整体 adopt 不在定制票范围);MarketingTouchProvider.tsx 为上游快照 introduced 文件的薄改(仅 gate 早退挂接,≤10 行)。

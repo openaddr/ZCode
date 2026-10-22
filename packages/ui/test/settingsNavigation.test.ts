@@ -19,11 +19,15 @@ afterEach(() => {
 });
 
 describe("settingsNavigation", () => {
+  // mae: D7 纯本地模式——usage(套餐用量)与 remoteDevices(SSH/WSL/Docker)分区被 feature gate 隐藏(#6),
+  // 意图跳转安全回落;其余分区保持上游行为。
   it("保留 usage、hooks 和 memory 分区", async () => {
     const navigation = await loadSettingsNavigation("test");
 
-    expect(navigation.isSettingsSectionEnabled("usage")).toBe(true);
-    expect(navigation.resolveSettingsSection("usage", "modelProvider")).toBe("usage");
+    expect(navigation.isSettingsSectionEnabled("usage")).toBe(false);
+    expect(navigation.resolveSettingsSection("usage", "modelProvider")).toBe("modelProvider");
+    expect(navigation.isSettingsSectionEnabled("remoteDevices")).toBe(false);
+    expect(navigation.resolveSettingsSection("remoteDevices", "general")).toBe("general");
     expect(navigation.isSettingsSectionEnabled("hooks")).toBe(true);
     expect(navigation.resolveSettingsSection("hooks", "modelProvider")).toBe("hooks");
     expect(navigation.isSettingsSectionEnabled("memory")).toBe(true);
@@ -201,7 +205,8 @@ describe("settingsNavigation", () => {
     dispose();
     navigation.setPendingSettingsUsageCodingPlanIntent();
 
-    expect(navigation.consumeInitialSettingsSection("general")).toBe("usage");
+    // mae: D7 纯本地模式——usage 分区被 gate 隐藏,残留意图安全回落默认分区(#6)
+    expect(navigation.consumeInitialSettingsSection("general")).toBe("general");
     expect(navigation.consumePendingSettingsUsageTab()).toBe("codingPlan");
   });
 

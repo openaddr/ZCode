@@ -31,6 +31,8 @@ import {
 import { cn } from "./components/lib/utils.js";
 import { toast } from "./components/ui/toast.js";
 import { useFeedbackStore } from "@/feedback/feedbackStore.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 import { getProviderBusinessErrorMessageId } from "@/lib/providerBusinessError.js";
 import { buildErrorFeedbackDescription } from "@/lib/errorFeedbackDraft.js";
 import {
@@ -367,7 +369,8 @@ export function ChatErrorBanner({
 
         {/* Bugfix: 错误横幅本身就是异常态，不能再经过 Radix Tooltip 的 Popper/Slot 状态链。
             这里改成普通 Button，避免无可用模型等错误触发横幅时发生 Maximum update depth 循环。 */}
-        {!modelConfigMissing ? (
+        {/* mae: D7 纯本地模式——错误横幅的问题上报入口随 gate 隐藏(#6) */}
+        {!modelConfigMissing && isFeatureVisible("feedback") ? (
           <Button
             type="button"
             variant="outline"

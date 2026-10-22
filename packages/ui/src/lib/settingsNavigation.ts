@@ -1,5 +1,7 @@
 /* eslint-disable max-lines -- 设置导航意图集中管理 sessionStorage、事件桥接和解析校验，拆分会让一次性意图消费顺序更难保证。 */
 import { logger } from "@/logger.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureDisabled } from "@/mae/featureGates.js";
 
 export type SettingsSectionId =
   | "general"
@@ -89,6 +91,9 @@ function isSettingsSectionId(value: string): value is SettingsSectionId {
 }
 
 export function isSettingsSectionEnabled(section: SettingsSectionId): boolean {
+  // mae: D7 纯本地模式——用量统计(套餐)与远程设备(SSH/WSL/Docker)分区随 gate 隐藏(#6)
+  if (isFeatureDisabled("coding-plan") && section === "usage") return false;
+  if (isFeatureDisabled("remote-workspace") && section === "remoteDevices") return false;
   return !HIDDEN_SETTINGS_SECTIONS.has(section);
 }
 

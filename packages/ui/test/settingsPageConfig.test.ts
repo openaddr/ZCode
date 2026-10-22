@@ -37,20 +37,15 @@ describe("settingsPageConfig", () => {
     ).toEqual([
       {
         id: "basics",
-        sections: [
-          "general",
-          "appearance",
-          "modelProvider",
-          "browser",
-          "remoteDevices",
-          "shortcuts",
-        ],
+        // mae: D7 纯本地模式——remoteDevices(SSH/WSL/Docker)分区被 feature gate 隐藏(#6)
+        sections: ["general", "appearance", "modelProvider", "browser", "shortcuts"],
       },
       {
         id: "agentCapabilities",
         sections: ["memory", "subagents", "plugin", "mcp", "skill", "commands", "hooks"],
       },
-      { id: "dataAndStats", sections: ["usage", "archives"] },
+      // mae: D7 纯本地模式——usage(套餐用量)分区被 feature gate 隐藏(#6)
+      { id: "dataAndStats", sections: ["archives"] },
     ]);
     expect(settingsSections.map((section) => section.id)).toEqual([
       "general",
@@ -64,9 +59,7 @@ describe("settingsPageConfig", () => {
       "commands",
       "hooks",
       "browser",
-      "remoteDevices",
       "shortcuts",
-      "usage",
       "archives",
     ]);
   });
@@ -94,12 +87,12 @@ describe("settingsPageConfig", () => {
     const { settingsSectionGroups } = createSettingsPageConfig({ isMacDesktop: true });
     const basics = settingsSectionGroups.find((group) => group.id === "basics");
 
+    // mae: D7 纯本地模式——remoteDevices 分区被 feature gate 隐藏(#6)
     expect(basics?.sections.map((section) => section.id)).toEqual([
       "general",
       "appearance",
       "modelProvider",
       "browser",
-      "remoteDevices",
       "computerUse",
       "shortcuts",
     ]);

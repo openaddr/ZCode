@@ -46,6 +46,8 @@ import {
 import { prepareMarketingHero } from "@/components/marketing-touch/marketingResources.js";
 
 import { MarketingRefreshContext } from "@/components/marketing-touch/useMarketingTaskCompletionRefresh.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 
 const Context = createContext<MarketingTouchController | null>(null);
 
@@ -318,7 +320,10 @@ export function MarketingTouchProvider({
     openCodingPlanUpgrade,
   ]);
   const [runtime, setRuntime] = useState<ReturnType<typeof createRuntime>>(null);
+  // mae: D7 纯本地模式——营销触达禁用时 runtime 置空:banner/弹窗与后台轮询一并消失(#6)
+  const maeMarketingVisible = isFeatureVisible("marketing-banner");
   useEffect(() => {
+    if (!maeMarketingVisible) return;
     const runtime = createRuntime();
     setRuntime(runtime);
     if (!runtime) return;
@@ -342,7 +347,7 @@ export function MarketingTouchProvider({
       poller.dispose();
       controller.dispose();
     };
-  }, [createRuntime]);
+  }, [createRuntime, maeMarketingVisible]);
   return (
     <Context.Provider value={runtime?.controller ?? null}>
       <MarketingRefreshContext.Provider value={runtime?.poller.refresh ?? null}>

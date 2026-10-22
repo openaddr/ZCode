@@ -95,6 +95,8 @@ import {
   readHighspeedRegularTpsFromHealth,
 } from "@/highspeed/highspeedSavedTime.js";
 import { buildHighspeedShareNotice } from "@/highspeed/highspeedShare.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 import {
   claimHighspeedCardAutoShare,
   claimHighspeedHealthyAttempt,
@@ -1562,9 +1564,12 @@ export function SessionPane({
       // Bug 根因：失败后只清理 in-flight 会让后续 snapshot 重复触发自动分享，最终打到 429。
       if (!claimHighspeedCardAutoShare(candidate.cardId, autoShareNow)) continue;
       // 分享卡片改为客户端生成，不再请求后端 share 接口；到期后直接把本地统计发布到左下角。
+      // mae: D7 纯本地模式——左下角加速分享卡(营销触达)不发布(#6)
+      if (isFeatureVisible("marketing-banner")) {
       browserGlobalNoticeStore?.publish(
         buildHighspeedShareNotice({ cardId: candidate.cardId, metrics: candidate.metrics }),
       );
+      }
       markHighspeedCardAutoShared(candidate.cardId);
     }
 

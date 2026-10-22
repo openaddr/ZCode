@@ -26,6 +26,8 @@ import {
   resolveShareImportFailurePresentation,
   type ShareImportIntent,
 } from "@/root/shareImportIntent.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 
 export function useRootPlatformEffects({
   initialWorkspaceAbsPath,
@@ -214,7 +216,8 @@ export function useRootPlatformEffects({
           openWorkspacePath(path);
         })
       : () => {};
-    const disposeShareImport = platform.onShareImport
+    // mae: D7 纯本地模式——会话分享导入深链接入口随 gate 忽略(#6)
+    const disposeShareImport = isFeatureVisible("session-share") && platform.onShareImport
       ? platform.onShareImport((payload) => {
           const current = pendingShareImportRef.current ?? activeShareImportRef.current;
           if (current && isShareImportIntentSame(current, payload)) {

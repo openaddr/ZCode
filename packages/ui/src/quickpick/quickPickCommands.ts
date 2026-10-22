@@ -1,3 +1,6 @@
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
+
 export type QuickPickCommandIcon =
   | "book"
   | "browser"
@@ -229,24 +232,27 @@ export function createQuickPickCommands({
     },
   ];
 
-  commands.push({
-    id: "feedback",
-    sectionId: "app",
-    titleId: "quickPick.command.feedback",
-    icon: "feedback",
-    keywords: [
-      "feedback",
-      "issue",
-      "support",
-      "tickets",
-      "问题上报",
-      "问题反馈",
-      "反馈",
-      "我的反馈",
-      "工单",
-    ],
-    run: handlers.openFeedback,
-  });
+  // mae: D7 纯本地模式——命令面板问题上报入口随 gate 隐藏(#6)
+  if (isFeatureVisible("feedback")) {
+    commands.push({
+      id: "feedback",
+      sectionId: "app",
+      titleId: "quickPick.command.feedback",
+      icon: "feedback",
+      keywords: [
+        "feedback",
+        "issue",
+        "support",
+        "tickets",
+        "问题上报",
+        "问题反馈",
+        "反馈",
+        "我的反馈",
+        "工单",
+      ],
+      run: handlers.openFeedback,
+    });
+  }
 
   if (canOpenCommunity) {
     commands.push({

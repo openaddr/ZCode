@@ -116,3 +116,22 @@ jj bookmark move mae --to @ && jj git push -b mae
 | 2026-10-22 | `packages/desktop/tsup.config.ts`（改，+3 行，`// mae:`） | 薄挂接 | `resolveBuildPackagedAgentTelemetryEnv` 静默时返回 `{}`——打包 Agent OTLP 端点不注入；bundle.mjs 的 OTLP 模块闭包机械校验清单不动 |
 | 2026-10-22 | `packages/desktop/src/main/desktopRuntimeEnv.ts`（改，+5 行，`// mae:`） | 薄挂接 | `buildHostProcessEnv` 静默时 OTLP 定向注入置空——dev 本机 shell 遗留的 OTEL 端点不进 host/Agent |
 | 2026-10-22 | `packages/desktop/src/main/index.ts`（改，~20 行，`// mae:`） | 薄挂接 | 三处：/api/v1/client/configs 业务配置后台请求默认切断（两 rollout 沿用默认关闭快照）；主进程 TTFT 与渲染动作追踪 OTLP 导出器静默时无端点 |
++++++++++++ lumrnnqw c93f6b6d "feat(mae): feature gates——十类云端功能入口隐藏(#6)" (rebased revision)
++++++++ lumrnnqw e1bcd425 "feat(mae): feature gates——十类云端功能入口隐藏(#6)" (rebased revision)
+| 2026-10-22 | `packages/ui/src/mae/featureGates.ts` + `packages/desktop/src/main/mae/featureGates.ts`（新增目录，各 1 文件）+ 单测 ×2 | 定制代码 | **P1 feature gates(#6)**：十类云端功能禁用清单的唯一所有者（D7）；渲染侧与 main 侧两份清单由互锁单测同步；各入口点一行引用，组件内不散布判断 |
+| 2026-10-22 | `architecture-policy.yaml`（改，exceptions 追加 `mae-feature-gates-unmanaged-files`） | 门禁登记 | mae gate 新增目录（ui/desktop 均为 legacy 非受管模块）与上游 introduced 文件 `MarketingTouchProvider.tsx` 薄改的 `unmanaged-new-file` 例外；理由与路径集中在该条目 |
+| 2026-10-22 | `packages/ui/src/Root.tsx`（3 处薄改） | gate 挂接 | `allowRemoteWorkspace` 默认值随 gate（远程工作区入口/dialog/恢复全链）；`onLogin` 两处（设置层+工作区层）随 gate（侧栏/设置页/quickpick 登录入口）(#6) |
+| 2026-10-22 | `packages/ui/src/WelcomeScreen.tsx`（1 处） | gate 挂接 | `resolveVisibleLoginProviders` gate 早退：OAuth 渠道按钮清空，登录入口仅剩 API Key(#6) |
+| 2026-10-22 | `packages/ui/src/WorkspaceSidebarFooter.tsx`（2 处） | gate 挂接 | 头像菜单「用量/升级」摘要块与「奖励中心」菜单项随 gate 隐藏；工作区侧栏与设置页 footer 共用本组件，一处挂接两处生效(#6) |
+| 2026-10-22 | `packages/ui/src/rewards/RewardsProvider.tsx` + `components/marketing-touch/MarketingTouchProvider.tsx`（各 1 处早退） | gate 挂接 | rewards：Provider 只透传 children；marketing：runtime 置空（轮询/弹窗/banner 全停，兼清后台请求）(#6) |
+| 2026-10-22 | `packages/ui/src/WebRemoteControlFeatureProvider.tsx`（1 处） | gate 挂接 | 手机远控 feature context 默认值随 gate；桌面端不传 prop 走默认，触发按钮/状态同步全链隐藏(#6) |
+| 2026-10-22 | `packages/ui/src/web-remote-control/WebRemoteControlDialog.tsx`（1 处） | gate 挂接 | 远控弹层内「管理 Bots」按钮随 bots gate 隐藏（BotsDialog 唯一挂载点）(#6) |
+| 2026-10-22 | `packages/ui/src/WorkspaceHeaderSections/WorkspaceHeaderActionSection.tsx`（1 处）+ `root/useRootPlatformEffects.ts`（1 处） | gate 挂接 | 会话分享：头部发布菜单项条件追加 gate；renderer 侧 share import 深链接监听随 gate 不注册(#6) |
+| 2026-10-22 | `packages/ui/src/lib/settingsNavigation.ts`（1 处） | gate 挂接 | `isSettingsSectionEnabled` 对 `usage`（套餐）与 `remoteDevices`（SSH/WSL/Docker）分区 gate 隐藏，残留意图安全回落(#6) |
+| 2026-10-22 | `packages/ui/src/settings/CodingPlanUpgradeDialogProvider.tsx`（1 处） | gate 挂接 | `openCodingPlanUpgrade` gate 早退 false：套餐升级弹窗全入口（footer/编排页/详情页/营销）统一失效(#6) |
+| 2026-10-22 | `packages/ui/src/WorkspaceHelpMenuButton.tsx`（2 处）+ `WindowsCaptionMenuButton.tsx`（1 处）+ `quickpick/quickPickCommands.ts`（1 处）+ `ChatErrorBanner.tsx`（1 处） | gate 挂接 | 反馈表单：帮助菜单「问题上报/功能建议」、Windows 标题栏菜单同两项、命令面板 feedback 命令、错误横幅「反馈」按钮随 gate 隐藏(#6) |
+| 2026-10-22 | `packages/ui/src/settings/AutomationsSection.tsx`（1 处） | gate 挂接 | `offPeakVisible` 追加 gate：闲时任务 tab/创建入口隐藏（定时任务不受影响）(#6) |
+| 2026-10-22 | `packages/ui/src/hooks/useRemoteConnectionEntryVisibility.ts`（1 处） | gate 挂接 | 远程连接入口可见性 hook/pure fn 返回 gate 值：ProjectComposerMenu 入口与远程 workspace 恢复全链隐藏(#6) |
+| 2026-10-22 | `packages/ui/src/v4/SessionPane.tsx`（1 处） | gate 挂接 | 左下角加速分享卡（营销触达）发布调用随 gate 跳过(#6) |
+| 2026-10-22 | `packages/desktop/src/main/desktopOAuthDeepLink.ts`（1 处）+ `desktopApplicationMenu.ts`（1 处） | gate 挂接 | main 侧：share import 深链接分支随 gate 忽略；原生菜单「问题上报」项随 gate 不注册(#6) |
+| 2026-10-22 | 单测调整 ×9 文件（`loginDialogProviders`/`quickPickCommands`/`settingsNavigation`/`settingsPageConfig`/`rewardsProvider`/`rewardsMenuIcon`/`codingPlanUpgradeDialogProvider`/`chatErrorBannerFeedbackDraft`/`workspaceWebRemoteControlTrigger`） | 测试 | 被裁剪功能牵连的既有单测改到 mae 语义（gate 默认关）；纯组件逻辑类测试以 `vi.mock` 显式放开 gate，保持上游行为验证不丢失(#6) |
