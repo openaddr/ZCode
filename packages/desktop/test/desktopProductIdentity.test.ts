@@ -23,7 +23,13 @@ describe("desktop product identity", () => {
   });
 
   it("ZCODE_ENV=test 使用可与生产版并排安装的 Preview 身份", () => {
-    expect(resolveDesktopProductIdentity({ ZCODE_ENV: "test" })).toEqual({
+    // mae: 官方身份测试统一带授权 env(D14:官方身份仅在授权下可解析)
+    expect(
+      resolveDesktopProductIdentity({
+        ZCODE_ENV: "test",
+        ZCODE_ALLOW_OFFICIAL_IDENTITY: "1",
+      }),
+    ).toEqual({
       flavor: "preview",
       appId: "dev.zcode.app.preview",
       productName: "ZCode Preview",
@@ -36,12 +42,20 @@ describe("desktop product identity", () => {
   it("ZCODE_PREVIEW_IDENTITY=1 让生产后端的构建改用 Preview 身份", () => {
     // 身份与后端环境分轴：同一份 Preview 身份既可以连测试后端，也可以连生产后端。
     for (const flag of ["1", " 1 "]) {
-      const env = { ZCODE_ENV: "production", ZCODE_PREVIEW_IDENTITY: flag };
+      const env = {
+        ZCODE_ENV: "production",
+        ZCODE_PREVIEW_IDENTITY: flag,
+        ZCODE_ALLOW_OFFICIAL_IDENTITY: "1", // mae: 官方身份需授权
+      };
       expect(resolveDesktopProductFlavor(env)).toBe("preview");
       expect(resolveDesktopProductIdentity(env)).toBe(desktopProductIdentities.preview);
     }
     for (const flag of ["", "0"]) {
-      const env = { ZCODE_ENV: "production", ZCODE_PREVIEW_IDENTITY: flag };
+      const env = {
+        ZCODE_ENV: "production",
+        ZCODE_PREVIEW_IDENTITY: flag,
+        ZCODE_ALLOW_OFFICIAL_IDENTITY: "1", // mae: 官方身份需授权
+      };
       expect(resolveDesktopProductFlavor(env)).toBe("production");
     }
   });
@@ -57,12 +71,21 @@ describe("desktop product identity", () => {
   });
 
   it("测试后端永远是 Preview 身份，开关无法把它变成正式 ZCode", () => {
-    expect(resolveDesktopProductFlavor({ ZCODE_ENV: "test", ZCODE_PREVIEW_IDENTITY: "0" })).toBe(
-      "preview",
-    );
-    expect(resolveDesktopProductFlavor({ ZCODE_ENV: "test", ZCODE_PREVIEW_IDENTITY: "1" })).toBe(
-      "preview",
-    );
+    const authorized = { ZCODE_ALLOW_OFFICIAL_IDENTITY: "1" }; // mae: 官方身份需授权
+    expect(
+      resolveDesktopProductFlavor({
+        ...authorized,
+        ZCODE_ENV: "test",
+        ZCODE_PREVIEW_IDENTITY: "0",
+      }),
+    ).toBe("preview");
+    expect(
+      resolveDesktopProductFlavor({
+        ...authorized,
+        ZCODE_ENV: "test",
+        ZCODE_PREVIEW_IDENTITY: "1",
+      }),
+    ).toBe("preview");
   });
 
   it("产物后缀只标记后端环境，生产后端的 Preview 包靠 productName 区分", () => {
@@ -75,9 +98,12 @@ describe("desktop product identity", () => {
   });
 
   it("ZCODE_ENV=production 完整保留正式包身份", () => {
-    expect(resolveDesktopProductIdentity({ ZCODE_ENV: "production" })).toBe(
-      desktopProductIdentities.production,
-    );
+    expect(
+      resolveDesktopProductIdentity({
+        ZCODE_ENV: "production",
+        ZCODE_ALLOW_OFFICIAL_IDENTITY: "1", // mae: 官方身份需授权
+      }),
+    ).toBe(desktopProductIdentities.production);
     expect(desktopProductIdentities.production).toEqual({
       flavor: "production",
       appId: "dev.zcode.app",
@@ -89,19 +115,25 @@ describe("desktop product identity", () => {
   });
 
   it("未注入或未知环境时不应误生成正式安装身份", () => {
-    expect(resolveDesktopProductIdentity({}).flavor).toBe("preview");
-    expect(resolveDesktopProductIdentity({ ZCODE_ENV: "staging" }).flavor).toBe("preview");
+    // mae: D14 默认翻转——零 env/未知 env 默认 mae 身份,而非官方 preview
+    expect(resolveDesktopProductIdentity({}).flavor).toBe("mae");
+    expect(resolveDesktopProductIdentity({ ZCODE_ENV: "staging" }).flavor).toBe("mae");
   });
 
   it("打包态 Windows AUMID 必须和 NSIS appId 保持一致", () => {
-    expect(resolveWindowsAppUserModelId({ ZCODE_ENV: "production" })).toBe(
+    const authorized = { ZCODE_ALLOW_OFFICIAL_IDENTITY: "1" }; // mae: 官方身份需授权
+    expect(resolveWindowsAppUserModelId({ ...authorized, ZCODE_ENV: "production" })).toBe(
       desktopProductIdentities.production.appId,
     );
-    expect(resolveWindowsAppUserModelId({ ZCODE_ENV: "test" })).toBe(
+    expect(resolveWindowsAppUserModelId({ ...authorized, ZCODE_ENV: "test" })).toBe(
       desktopProductIdentities.preview.appId,
     );
     expect(
-      resolveWindowsAppUserModelId({ ZCODE_ENV: "production", ZCODE_PREVIEW_IDENTITY: "1" }),
+      resolveWindowsAppUserModelId({
+        ...authorized,
+        ZCODE_ENV: "production",
+        ZCODE_PREVIEW_IDENTITY: "1",
+      }),
     ).toBe(desktopProductIdentities.preview.appId);
     // 主进程按编译期 flavor 取 AUMID，不依赖安装后机器上的环境变量。
     expect(resolveWindowsAppUserModelIdForFlavor("preview")).toBe(
@@ -113,6 +145,12 @@ describe("desktop product identity", () => {
   });
 
   it("开发态继续使用独立 AUMID，避免污染打包版 Shell 身份", () => {
-    expect(resolveWindowsAppUserModelId({}, { isPackaged: false })).toBe("cn.aminer.zcode");
+    // mae: 默认身份已翻转为 mae,官方开发态 AUMID 在授权 env 下验证(mae 开发态 AUMID 见 mae-identity.test.ts)
+    expect(
+      resolveWindowsAppUserModelId(
+        { ZCODE_ENV: "production", ZCODE_ALLOW_OFFICIAL_IDENTITY: "1" },
+        { isPackaged: false },
+      ),
+    ).toBe("cn.aminer.zcode");
   });
 });

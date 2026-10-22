@@ -61,6 +61,7 @@ describe("desktop renderer Vite dependency aliases", () => {
 
   it("marks non-production renderer builds as local development runtime", async () => {
     vi.stubEnv("ZCODE_ENV", "production");
+    vi.stubEnv("ZCODE_ALLOW_OFFICIAL_IDENTITY", "1"); // mae: 官方身份需授权(D14)
     const desktopRoot = resolve(import.meta.dirname, "..");
     const configFile = resolve(desktopRoot, "vite.config.ts");
     const result = await loadConfigFromFile(
@@ -105,6 +106,7 @@ describe("desktop renderer Vite dependency aliases", () => {
 
   it("injects the E2E store bridge only from the runner flag", async () => {
     vi.stubEnv("ZCODE_ENV", "test");
+    vi.stubEnv("ZCODE_ALLOW_OFFICIAL_IDENTITY", "1"); // mae: 官方身份需授权(D14)
     vi.stubEnv("VITE_ZCODE_E2E_STORE_BRIDGE", "1");
     const desktopRoot = resolve(import.meta.dirname, "..");
     const configFile = resolve(desktopRoot, "vite.config.ts");
@@ -130,6 +132,7 @@ describe("desktop renderer Vite dependency aliases", () => {
   it("ZCODE_PREVIEW_IDENTITY=1 让生产后端的 renderer 编译成 Preview 身份", async () => {
     vi.stubEnv("ZCODE_ENV", "production");
     vi.stubEnv("ZCODE_PREVIEW_IDENTITY", "1");
+    vi.stubEnv("ZCODE_ALLOW_OFFICIAL_IDENTITY", "1"); // mae: 官方身份需授权(D14)
     const desktopRoot = resolve(import.meta.dirname, "..");
     const configFile = resolve(desktopRoot, "vite.config.ts");
     const result = await loadConfigFromFile(

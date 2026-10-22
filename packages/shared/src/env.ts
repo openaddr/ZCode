@@ -2,7 +2,8 @@ import type { ZCodeRuntimeEnv } from "./runtimeEnv.js";
 
 export type ZCodeEnv = "test" | "production";
 /** 安装包身份：决定应用名、app id、Electron 数据目录与更新策略；与后端环境 `ZCodeEnv` 是两个轴。 */
-export type ZCodeProductFlavor = "production" | "preview";
+// mae: D14 默认身份翻转后,编译期 define 可注入 "mae"(specs/mae/identity-isolation.md)
+export type ZCodeProductFlavor = "production" | "preview" | "mae";
 export type ArmsRumEnv = "local" | "prod";
 
 // 非构建环境（如 e2e 测试的 mocha）下 define 不存在，用 typeof 检查 + fallback 避免 ReferenceError
@@ -30,7 +31,8 @@ export function normalizeZCodeProductFlavor(
   zcodeEnv: ZCodeEnv,
 ): ZCodeProductFlavor {
   const normalized = value?.trim().toLowerCase();
-  if (normalized === "production" || normalized === "preview") {
+  // mae: 接受编译期注入的 "mae",不再回落官方 preview(D14)
+  if (normalized === "production" || normalized === "preview" || normalized === "mae") {
     return normalized;
   }
   return zcodeEnv === "production" ? "production" : "preview";
