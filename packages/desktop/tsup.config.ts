@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { defineConfig } from "tsup";
 import { getBuildMetadata } from "./scripts/build-metadata.mjs";
 import { resolveDesktopProductFlavor } from "./scripts/desktop-product-identity.mjs";
+import { isMaeExternalSilenceEnabled } from "@zcode/shared/mae"; // mae: 构建期遥测静默(#7)
 const { copyGenUiRuntimeAssets } = await import(
   pathToFileURL(resolve(import.meta.dirname, "scripts/gen-ui-runtime-assets.mjs")).href
 );
@@ -100,6 +101,8 @@ export function resolveBuildRemoteCdnReleaseRoots(runtimeEnv: Record<string, str
 export function resolveBuildPackagedAgentTelemetryEnv(
   runtimeEnv: Record<string, string | undefined>,
 ): Record<string, string> {
+  // mae: 外联静默——遥测端点置空(框架保留,数据不出本机);官方身份显式授权时才注入 OTLP(#7)
+  if (isMaeExternalSilenceEnabled(runtimeEnv)) return {};
   const endpoint = runtimeEnv.ZCODE_PACKAGED_AGENT_OTEL_ENDPOINT?.trim();
   const headers = runtimeEnv.ZCODE_PACKAGED_AGENT_OTEL_HEADERS?.trim();
   const serviceName =

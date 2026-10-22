@@ -735,6 +735,11 @@ export default {
       to: "config/provider/zcode-builtin.json",
     },
     {
+      // mae: 外联静默——mae 裁剪目录(仅 API-key 型第三方)随包发布,主进程默认解析它(#7)
+      from: builtinProviderConfig.sourcePath.replace("zcode-builtin", "mae-builtin"),
+      to: "config/provider/mae-builtin.json",
+    },
+    {
       // 应用图标：打包后放入 resources 目录，主进程通过 process.resourcesPath 加载
       from: "build/icon.png",
       to: "icon.png",

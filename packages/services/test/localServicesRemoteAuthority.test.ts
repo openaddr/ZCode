@@ -76,6 +76,9 @@ function writeZCodeBuiltinProviderConfig(home: string): string {
   return filePath;
 }
 
+// mae: 外联静默默认会切断官方目录远端刷新;本文件验证官方远端装配语义,显式授权官方身份(#7)
+process.env.ZCODE_ALLOW_OFFICIAL_IDENTITY = "1";
+
 describe("createLocalServices remote authority", () => {
   afterEach(() => {
     process.env.HOME = originalHome;

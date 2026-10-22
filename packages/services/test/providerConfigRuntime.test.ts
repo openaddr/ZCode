@@ -8,6 +8,9 @@ import { readLegacyZCodeConfigProviders } from "../src/model-provider/legacyZCod
 import { createProviderConfigRuntime } from "../src/model-provider/providerConfigRuntime.js";
 import { setDataBaseDir } from "../src/paths.js";
 
+// mae: 外联静默默认会切断官方目录远端刷新;本文件验证官方刷新语义,显式授权官方身份(#7)
+process.env.ZCODE_ALLOW_OFFICIAL_IDENTITY = "1";
+
 function legacyProvider(): ModelProviderConfig {
   return {
     id: "custom-provider",

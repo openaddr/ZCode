@@ -58,6 +58,13 @@ modules:
   - id: formal-proof
     roots: [packages/formal-proof/src]
     managed: false
+  # mae: 外联静默模块(fork 定制,specs/mae/#7)——经 architecture:adopt 登记,条目为手工收敛的等价格式
+  - id: mae-external-silence
+    roots: [packages/shared/src/mae]
+    managed: true
+    requires: []
+    publicEntrypoints: [packages/shared/src/mae/index.ts, packages/shared/src/mae/contract.ts]
+    layers: {domain: .}
   - id: stream-animate
     roots: [packages/stream-animate/src]
     managed: false

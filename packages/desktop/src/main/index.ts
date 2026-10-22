@@ -267,6 +267,10 @@ import {
 } from "./embeddedBrowserPermissionUiBridge.js";
 import { mapZCodeEnvToArmsRumEnv } from "@zcode/shared";
 import {
+  isMaeExternalSilenceEnabled,
+  stripMaeExternalTelemetryEnv,
+} from "@zcode/shared/mae"; // mae: 外联静默——遥测端点置空+业务配置后台请求切断(#7)
+import {
   findWindowsProcessesReferencingResourceMarkers,
   probeWindowsPackagedResourceWritable,
   resolveWindowsPackagedResourceLockMarkers,
@@ -856,12 +860,18 @@ const readHelpConfig = createDesktopHelpConfigReader({
 });
 // 同一个 /api/v1/client/configs fetcher 供两个灰度 rollout 共用（请求参数与鉴权完全一致，
 // 各自独立缓存/去重，服务端按 data.configs.<key> 区分功能）。
-const electronClientConfigsFetcher = createElectronDesktopContextPromptConfigFetcher({
-  appVersion: ZCODE_VERSION || app.getVersion(),
-  deviceMid,
-  getClientLanguage: () => currentApplicationLocale,
-  resolveEndpointOrigin: resolveCurrentZCodeEndpointOrigin,
-});
+// mae: 外联静默——默认切断业务配置后台请求,两个 rollout 沿用默认关闭快照(#7)
+const maeExternalSilence = isMaeExternalSilenceEnabled();
+const electronClientConfigsFetcher = maeExternalSilence
+  ? (async () => {
+      throw new Error("mae external silence: client configs fetch disabled");
+    })
+  : createElectronDesktopContextPromptConfigFetcher({
+      appVersion: ZCODE_VERSION || app.getVersion(),
+      deviceMid,
+      getClientLanguage: () => currentApplicationLocale,
+      resolveEndpointOrigin: resolveCurrentZCodeEndpointOrigin,
+    });
 desktopContextPromptRollout = createDesktopContextPromptRollout({
   fetchConfig: electronClientConfigsFetcher,
   logger,
@@ -871,7 +881,10 @@ const rendererActionTraceRollout = createRendererActionTraceRollout({
   logger,
 });
 const localTtftExporter = createLocalTtftExporter({
-  env: { ...hostProcessLocalEnv, ...process.env },
+  // mae: 外联静默——主进程本地 OTLP 导出器默认无端点(框架保留,数据不出本机)(#7)
+  env: maeExternalSilence
+    ? stripMaeExternalTelemetryEnv({ ...hostProcessLocalEnv, ...process.env })
+    : { ...hostProcessLocalEnv, ...process.env },
   version: ZCODE_VERSION || app.getVersion(),
   logger,
 });
@@ -879,10 +892,12 @@ ipcMain.on(PlatformChannels.ReportLocalTtftBatch, (_event, batch: unknown) =>
   localTtftExporter.enqueue(batch),
 );
 const rendererActionTraceBroker = createRendererActionTraceBroker({
-  exporter: createRendererActionTraceExporter({
-    ...hostProcessLocalEnv,
-    ...process.env,
-  }),
+  exporter: createRendererActionTraceExporter(
+    // mae: 外联静默——渲染动作追踪导出器与 TTFT 同口径默认无端点(#7)
+    maeExternalSilence
+      ? stripMaeExternalTelemetryEnv({ ...hostProcessLocalEnv, ...process.env })
+      : { ...hostProcessLocalEnv, ...process.env },
+  ),
   logger,
 });
 let disposeRendererActionTraceIpc: (() => void) | undefined;
