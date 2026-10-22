@@ -27,10 +27,12 @@
 | `packages/desktop/src/main/desktopLinuxDeepLinkRegistration.ts` | Linux 协议注册 scheme 常量 |
 | `packages/desktop/src/main/desktopFinderOpenFolderWorkflow.ts` | Finder 工作流链接 scheme 常量 |
 | `packages/shared/src/platform.ts` | share/import 意图注册 scheme 常量 |
-| `packages/desktop/src/main/index.ts`(启动早期) | mae 身份时 `setDataBaseDir(~/.zcode-mae)` |
+| `packages/desktop/src/main/index.ts`(启动早期) | mae 身份时 `setDataBaseDir(~/.zcode-mae)`(落地移至 `desktopDataBaseDirBootstrap.ts`,见落地记录) |
 | `packages/shared/src/env.ts` | `ZCodeProductFlavor` 类型与 normalize 接受 "mae"(编译期 define 不回落官方 preview) |
 
 > 落地记录(2026-10-22,#8):已落地 desktop-product-identity.mjs(flavor 委托+mae 注册+AUMID 分支)、desktopRuntimeEnv.ts(运行名链/isMaePackagedRuntime/helper 变体)、shared/env.ts;electron-builder 配置无需改动——productName/appId/linux 包名本就参数化走 identity。scheme 相关行与 index.ts 数据根行属 #9/#10。
+
+> 落地记录(2026-10-22,#9):数据根挂接落点为 `desktopDataBaseDirBootstrap.ts` 而非原列 index.ts——index.ts 顶部 `desktopEarlyDataBaseDirBootstrap.js` 副作用 import 使前者才是启动 import 链中最早的 dataBaseDir 触点,index.ts 函数体注入为时已晚(bootstrap setting.json 会先按官方 `~/.zcode` 解析)。该挂接三件事:启动早期 `setDataBaseDir(~/.zcode-mae)`(经 paths.ts 编程接口,优先级高于 env)、bootstrap setting.json 默认路径同根切到 `~/.zcode-mae/.zcode/v2/setting.json`、注入 `ZCODE_DESKTOP_HOME_DIR=~/.zcode-mae`(settingService 的 home 覆盖轴,主进程与 host 子进程的 setting.json 均落 mae 根,经 buildHostProcessEnv 现有继承机制透传)。决策函数在 mae-identity.mjs(`resolveMaeDataRootBootstrap`):显式 `ZCODE_DATA_BASE_DIR` 为保留覆盖轴(上游 e2e wdio 与 CLI 调试依赖它重定向,mae 不劫持);官方身份返回 null 完全保留上游语义。desktopRuntimeEnv.ts 开发态 helper 兜底 mae 化(显式 ZCODE_HOME 仍优先)。遗留:services 侧 commands/hooks/mcp-sync 的用户级目录(`~/.zcode/commands`、`~/.zcode/cli/config.json`、hooks)仍按真实 HOME 解析(上游与 CLI 对等的设计),彻底收敛待后续票。
 
 ## 守卫与测试
 

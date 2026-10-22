@@ -8,6 +8,8 @@
  *   未授权却显式请求官方身份(如 `ZCODE_PREVIEW_IDENTITY=1`)时构建期直接抛错。
  * - 身份轴与 ZCODE_ENV 轴正交:ZCODE_ENV 只决定后端环境与产物 _TEST 后缀,不再决定身份。
  */
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 /** 授权开关:允许解析官方(production/preview)身份的唯一钥匙(值固定拼写 `1`)。 */
 export const ZCODE_ALLOW_OFFICIAL_IDENTITY_ENV = "ZCODE_ALLOW_OFFICIAL_IDENTITY";
@@ -76,4 +78,33 @@ export function resolveMaeRuntimeApplicationName({ isLocalDevelopmentRuntime, pr
     : productFlavor === "preview"
       ? "ZCode Preview"
       : "ZCode";
+}
+
+/**
+ * mae 业务数据根(specs/mae/identity-isolation.md、specs/mae/README.md D10/D3,issue #9):
+ * 数据基目录 `~/.zcode-mae`,业务数据落 `~/.zcode-mae/.zcode`,与官方 `~/.zcode` 零交集。
+ */
+export const MAE_DATA_BASE_DIR_NAME = ".zcode-mae";
+
+/** mae 数据基目录:与 services/paths.ts 同源的 HOME→os.homedir() 兜底链上拼 .zcode-mae。 */
+export function resolveMaeDataBaseDir(env = process.env) {
+  return join(env.HOME?.trim() || homedir(), MAE_DATA_BASE_DIR_NAME);
+}
+
+/**
+ * mae 数据根启动决策(issue #9):
+ * - mae 身份(开发态与打包态同样生效)→ 返回 `~/.zcode-mae`,由 mae 启动路径显式
+ *   `setDataBaseDir()` 设定(编程接口优先级高于环境变量,不依赖 env 透传);
+ * - 显式 `ZCODE_DATA_BASE_DIR` 是保留覆盖轴:上游 e2e(wdio)与 CLI 调试靠它重定向数据根,
+ *   mae 不劫持显式覆盖,避免测试与联调数据落错目录;
+ * - 官方身份(显式授权构建才可出现)→ 返回 null,完全保留上游数据根语义。
+ */
+export function resolveMaeDataRootBootstrap(productFlavor, env = process.env) {
+  if (productFlavor !== MAE_IDENTITY.flavor) {
+    return null;
+  }
+  if (env.ZCODE_DATA_BASE_DIR?.trim()) {
+    return null;
+  }
+  return resolveMaeDataBaseDir(env);
 }

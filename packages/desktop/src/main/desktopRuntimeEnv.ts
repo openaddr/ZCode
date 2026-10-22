@@ -31,6 +31,7 @@ import { resolvePlatformKeyForPackagedApp } from "../../scripts/target-platform.
 import {
   getAppConfigDir,
   getDataBaseDir,
+  getZCodeDataRootDir,
   ZCODE_CUA_BUNDLED_HELPER_APP_PATH_ENV,
   ZCODE_WINDOWS_APP_INSTALL_DIR_ENV,
 } from "@zcode/services/node";
@@ -532,7 +533,11 @@ export function buildHostProcessEnv(hostProcessLocalEnv: Record<string, string>)
             )
           ? rawInheritedEnv.ZCODE_CUA_BUNDLED_HELPER_APP_PATH?.trim() ||
             join(
-              rawInheritedEnv.ZCODE_HOME?.trim() || join(homedir(), ".zcode"),
+              // mae: 开发态 helper 兜底 mae 化——mae 运行时数据根为 ~/.zcode-mae,防开发调试污染官方目录(#9)
+              rawInheritedEnv.ZCODE_HOME?.trim() ||
+                (ZCODE_PRODUCT_FLAVOR === "mae"
+                  ? getZCodeDataRootDir()
+                  : join(homedir(), ".zcode")),
               "computer-use",
               "dev",
               DEV_HELPER_APP_NAME,
