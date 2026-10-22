@@ -82,6 +82,8 @@ git push origin refs/remotes/upstream/main:refs/heads/main  # 建议顺手做：
 
 > `origin/main` **保留不删**：`scripts/check-workspace-freshness.mjs` 整体以 origin/main 为架构基线（落后超阈值直接失败），删了即断。把它维护成"上游同步点镜像"后，GitHub 网页上 `main..mae` 的 diff 就是定制全景，可视化定制清单。
 
+> **AGENTS.md 冲突固定解法（所有权模型）**：`AGENTS.md` 归 mae 所有，同步冲突一律保留我方版本；`upstream-AGENTS.md` 是上游快照，同步时用上游新内容**整体替换**（`git show refs/remotes/upstream/main:AGENTS.md > upstream-AGENTS.md`），替换后 diff 一眼上游是否有实质规则变化。原「例外文件薄改」条款作废。
+
 **切换 merge 模型**（满足铁律 4 信号时，一次性）：
 
 ```bash
@@ -98,3 +100,9 @@ jj bookmark move mae --to @ && jj git push -b mae
 | 2026-10-21 | `MAE.md`（新增） | 手册 | 本文件：模型/jj 纪律/同步 runbook/定制登记 |
 | 2026-10-21 | `AGENTS.md`（改，「核心原则」首条） | 铁律内联 | 三条铁律（工作区/书签+PR/定制隔离）内联+指向本文件；上游若改此文件，同步时整块重放 |
 | 2026-10-21 | `.gitattributes`（改，首部 7 行） | 口径 | 全仓文本恒 LF + `.bat/.cmd` CRLF 豁免；根因与双保险见 MAE.md「EOL 口径」 |
+| 2026-10-21 | `specs/mae/`（新增目录：README + identity-isolation + feature-gates + versioning-branding） | 规格 | zcode-mae 独立版决策总表（D1–D14）与 P0–P2 规格；行为改动先更新此处 spec（AGENTS.md spec-first 纪律） |
+| 2026-10-21 | `AGENTS.md`（改，核心原则首条末尾） | 指针补全 | 补 `specs/mae/` 指向。**AGENTS.md 为例外文件**：为 mae 项目目标可修改，接受同步冲突成本（用户裁决）；触碰照旧在此登记 |
+| 2026-10-21 | `docs/mae/agents/`（新增目录：issue-tracker + triage-labels + domain） | 技能配置 | matt-pocock 技能体系的 mae 侧配置：GitHub Issues 跟踪（`gh --repo openaddr/ZCode`，与上游本地 Markdown 约定区分）、五角色标签（已建）、mae 单上下文领域文档（`docs/mae/GLOSSARY.md` + `docs/mae/adr/` 独立编号） |
+| 2026-10-21 | `AGENTS.md`（改，末尾追加 Agent Skills 节） | 入口补全 | 指向 `docs/mae/agents/` 三份配置；声明上游 `docs/agents/`、`docs/issues/` 约定不适用于本 fork |
+| 2026-10-22 | `.gitattributes`（改，`*.bat`/`*.cmd` 例外口径） | 口径 | jj 按字节快照下 `text eol=crlf` 要求 blob 归一 LF，与上游 CRLF blob 形成永久幻影 M（实锤挡住 affected 脏树门）；改 `-text` 逐字节保真。另：rebase 后 git index 陈旧会造成全树幻影，`rm .git/index && git reset --mixed HEAD` 重建即清 |
+| 2026-10-22 | `AGENTS.md`（重写为我方薄宪法层）+ `upstream-AGENTS.md`（新增，85 行上游快照） | 结构变更 | **所有权模型**：AGENTS.md 归 mae（铁律/规则层级/Agent Skills），上游规则降级为快照引用、冲突以我方为准；同步冲突固定解法见「四」runbook，原「例外文件」条款作废 |

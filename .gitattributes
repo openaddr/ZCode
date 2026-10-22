@@ -3,9 +3,11 @@
 # 快照同口径，本仓不再受 core.autocrlf 影响。jj 侧另有 working-copy.eol-conversion=input 双保险。
 * text=auto eol=lf
 
-# Windows 批处理按惯例必须 CRLF，豁免出 LF 基线
-*.bat text eol=crlf
-*.cmd text eol=crlf
+# Windows 批处理按惯例必须 CRLF。jj 按原始字节快照，text eol=crlf 会要求 blob 归一为 LF，
+# 而上游同步带入的 .bat blob 是 CRLF，形成永久幻影 M（2026-10-22 实锤，挡住 affected 脏树门）；
+# 改用 -text 逐字节保真：工作区与入库同为 CRLF，jj 快照与 git 过滤器不再错位。
+*.bat -text
+*.cmd -text
 
 # 保持脚本文件 LF 换行，避免 Windows CRLF 导致 shebang 解析失败
 *.mjs text eol=lf
