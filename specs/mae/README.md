@@ -11,7 +11,7 @@
 | D3 | 用户数据与官方完全隔离,零交集 |
 | D4 | 深链接协议换 `zcode-mae://`;官方 `zcode://` 链接对 mae 无效为预期行为 |
 | D5 | 更新通道暂不做;后续自建 generic feed;appId 发版后不变 |
-| D6 | 定制隔离纪律:新增文件优先(细则见 MAE.md「三」);**AGENTS.md 为我方自有文件**(薄宪法层),上游规则快照在 `upstream-AGENTS.md`,同步时整体替换、冲突以 AGENTS.md 与 specs/mae/ 为准 |
+| D6 | 定制隔离纪律:新增文件优先(细则见 docs/mae/sync-runbook.md 附录);**AGENTS.md 为我方自有文件**(薄宪法层),上游规则快照在 `upstream-AGENTS.md`,同步时整体替换、冲突以 AGENTS.md 与 specs/mae/ 为准 |
 | D7 | 纯本地模式:登录/套餐/分享/闲时/反馈/营销/奖励/手机远控/Bots/SSH·WSL·Docker 全部禁用且入口隐藏 |
 | D8 | provider 目录裁剪:仅保留 API-key 型第三方与自定义配置;目录本地化,切断官方后台刷新 |
 | D9 | 遥测:框架保留,端点置空(数据不出本机) |
@@ -36,4 +36,4 @@
 - 网络审计:运行期对官方域名的请求仅剩用户自配模型 API(若有)与插件市场 GitHub 源。
 - 全新克隆、不设任何环境变量、任一构建入口 → 产物默认 mae 身份。
 - `pnpm typecheck`、`pnpm lint`、`pnpm verify:pre-push` 真实通过。
-- 触碰上游文件的每处已按 MAE.md「三」登记(≤10 行、`// mae:` 标记)。
+- 触碰上游文件的每处已按 docs/mae/sync-runbook.md 附录三强制登记(≤10 行、`// mae:` 标记)。

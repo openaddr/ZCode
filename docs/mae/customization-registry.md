@@ -1,0 +1,51 @@
+# mae 定制清单(台账)
+
+> 每处触碰上游文件必须在此登记(规则与"≤10 行 + `// mae:` 标记 + 薄改"三强制见 [sync-runbook.md](sync-runbook.md) 附录)。同步解冲突时按本表逐条恢复。append-only:历史行不改写,新触碰追加新行。
+
+| 日期 | 文件/位置 | 类型 | 意图与要点 |
+| --- | --- | --- | --- |
+| 2026-10-21 | 根 `MAE.md`(新增,后于 2026-10-22 拆分为 sync-runbook + 本台账并删除) | 手册 | fork 运维手册首版:模型/jj 纪律/同步 runbook/定制登记 |
+| 2026-10-21 | `AGENTS.md`(改,「核心原则」首条) | 铁律内联 | 三条铁律(工作区/书签+PR/定制隔离)内联+指向手册;上游若改此文件,同步时整块重放 |
+| 2026-10-21 | `.gitattributes`(改,首部 7 行) | 口径 | 全仓文本恒 LF + `.bat/.cmd` CRLF 豁免;根因与双保险见 sync-runbook「EOL 口径」 |
+| 2026-10-21 | `specs/mae/`(新增目录:README + identity-isolation + feature-gates + versioning-branding) | 规格 | zcode-mae 独立版决策总表(D1–D14)与 P0–P2 规格;行为改动先更新此处 spec(AGENTS.md spec-first 纪律) |
+| 2026-10-21 | `AGENTS.md`(改,核心原则首条末尾) | 指针补全 | 补 `specs/mae/` 指向 |
+| 2026-10-21 | `docs/mae/agents/`(新增目录:issue-tracker + triage-labels + domain) | 技能配置 | matt-pocock 技能体系的 mae 侧配置:GitHub Issues 跟踪(`gh --repo openaddr/ZCode`,与上游本地 Markdown 约定区分)、五角色标签、mae 单上下文领域文档 |
+| 2026-10-21 | `AGENTS.md`(改,末尾追加 Agent Skills 节) | 入口补全 | 指向 `docs/mae/agents/` 三份配置;声明上游 `docs/agents/`、`docs/issues/` 约定不适用于本 fork |
+| 2026-10-22 | `.gitattributes`(改,`*.bat`/`*.cmd` 例外口径) | 口径 | jj 按字节快照下 `text eol=crlf` 要求 blob 归一 LF,与上游 CRLF blob 形成永久幻影 M(实锤挡住 affected 脏树门);改 `-text` 逐字节保真 |
+| 2026-10-22 | `AGENTS.md`(重写为我方薄宪法层)+ `upstream-AGENTS.md`(新增,85 行上游快照) | 结构变更 | **所有权模型**:AGENTS.md 归 mae(铁律/规则层级/Agent Skills),上游规则降级为快照引用、冲突以我方为准;同步冲突固定解法见 sync-runbook「6」 |
+| 2026-10-22 | `config/provider/mae-builtin.json` + `mae-builtin.test.json`(新增,`scripts/mae/generate-mae-builtin-catalog.mjs` 生成) | 目录裁剪 | mae 内置 provider 目录(#7/D8):官方 zcode-builtin(.test).json 经 `@zcode/shared/mae` 的 filterZCodeBuiltinCatalogForMae 派生,仅留 14 个 API-key 型第三方模板,删全部账号型 provider 与智谱系/opencode-go 端点;上游目录变更后须重跑生成脚本(provider-node 测试强制校验) |
+| 2026-10-22 | `packages/shared/src/mae/`(新增目录:externalSilence + providerCatalogFilter + index + adopt 工件)+ `packages/shared/package.json`(改,exports 加 `./mae` 一行;JSON 无法注释,以此登记为准) | 定制模块 | mae 外联静默唯一所有者(#7/D8/D9/D14):`isMaeExternalSilenceEnabled` 默认开、`ZCODE_ALLOW_OFFICIAL_IDENTITY=1` 显式恢复官方;`stripMaeExternalTelemetryEnv` 剥离遥测键;目录裁剪过滤函数同置于此 |
+| 2026-10-22 | `architecture-policy.yaml`(改,+7 行,`# mae:`) | 治理登记 | `architecture:adopt mae-external-silence` 登记新 managed 模块(packages/shared/src/mae,domain 层) |
+| 2026-10-22 | `packages/desktop/src/main/desktopProviderConfig.ts`(改,~8 行,`// mae:`) | 薄挂接 | 内置目录解析默认指向 mae-builtin(.test).json;显式 env 覆盖与官方身份授权时保持原行为 |
+| 2026-10-22 | `packages/desktop/electron-builder.config.js`(改,+6 行,`// mae:`) | 薄挂接 | extraResources 增加随包发布的 mae 目录文件 |
+| 2026-10-22 | `packages/services/src/model-provider/providerConfigRuntime.ts`(改,~7 行,`// mae:`) | 薄挂接 | 静默时丢弃 zcodeBuiltinRemote/zcodeBuiltinEnvironment 装配——切断官方提供商目录 CDN 后台刷新与 60s 周期检查 |
+| 2026-10-22 | `scripts/build-time-config.mjs`(改,~9 行,`// mae:`) | 薄挂接 | 构建期 ARMS RUM/事件上报端点解析为空(空端点=SDK 关闭,框架保留) |
+| 2026-10-22 | `packages/desktop/tsup.config.ts`(改,+3 行,`// mae:`) | 薄挂接 | `resolveBuildPackagedAgentTelemetryEnv` 静默时返回 `{}`——打包 Agent OTLP 端点不注入;bundle.mjs 的 OTLP 模块闭包机械校验清单不动 |
+| 2026-10-22 | `packages/desktop/src/main/desktopRuntimeEnv.ts`(改,~5 行,`// mae:`) | 薄挂接 | `buildHostProcessEnv` 静默时 OTLP 定向注入置空——dev 本机 shell 遗留的 OTEL 端点不进 host/Agent |
+| 2026-10-22 | `packages/desktop/src/main/index.ts`(改,~20 行三处,`// mae:`) | 薄挂接 | /api/v1/client/configs 业务配置后台请求默认切断;主进程 TTFT 与渲染动作追踪 OTLP 导出器静默时无端点 |
+| 2026-10-22 | `packages/ui/src/mae/featureGates.ts` + `packages/desktop/src/main/mae/featureGates.ts`(新增,含单测 ×2) | 定制代码 | **P1 feature gates(#6)**:十类云端功能禁用清单唯一所有者(D7);渲染侧与 main 侧清单由互锁单测同步;各入口点一行引用 |
+| 2026-10-22 | `architecture-policy.yaml`(改,exceptions 追加 `mae-feature-gates-unmanaged-files`) | 门禁登记 | mae gate 新增目录与上游 introduced 文件 `MarketingTouchProvider.tsx` 薄改的 `unmanaged-new-file` 例外 |
+| 2026-10-22 | `packages/ui/src/Root.tsx`(3 处薄改) | gate 挂接 | `allowRemoteWorkspace` 默认值随 gate;`onLogin` 两处随 gate(#6) |
+| 2026-10-22 | `packages/ui/src/WelcomeScreen.tsx`(1 处) | gate 挂接 | `resolveVisibleLoginProviders` gate 早退:OAuth 按钮清空,登录入口仅剩 API Key(#6) |
+| 2026-10-22 | `packages/ui/src/WorkspaceSidebarFooter.tsx`(2 处) | gate 挂接 | 头像菜单「用量/升级」与「奖励中心」随 gate 隐藏(#6) |
+| 2026-10-22 | `packages/ui/src/rewards/RewardsProvider.tsx` + `components/marketing-touch/MarketingTouchProvider.tsx`(各 1 处早退) | gate 挂接 | rewards Provider 只透传 children;marketing runtime 置空(轮询/弹窗/banner 全停)(#6) |
+| 2026-10-22 | `packages/ui/src/WebRemoteControlFeatureProvider.tsx`(1 处) | gate 挂接 | 手机远控 feature context 默认值随 gate,触发按钮/状态全链隐藏(#6) |
+| 2026-10-22 | `packages/ui/src/web-remote-control/WebRemoteControlDialog.tsx`(1 处) | gate 挂接 | 远控弹层「管理 Bots」按钮随 bots gate 隐藏(BotsDialog 唯一挂载点)(#6) |
+| 2026-10-22 | `packages/ui/src/WorkspaceHeaderSections/WorkspaceHeaderActionSection.tsx`(1 处)+ `root/useRootPlatformEffects.ts`(1 处) | gate 挂接 | 会话分享:头部发布菜单项条件追加 gate;renderer 侧 share import 深链接监听不注册(#6) |
+| 2026-10-22 | `packages/ui/src/lib/settingsNavigation.ts`(1 处) | gate 挂接 | `isSettingsSectionEnabled` 对 `usage`/`remoteDevices` 分区 gate 隐藏(#6) |
+| 2026-10-22 | `packages/ui/src/settings/CodingPlanUpgradeDialogProvider.tsx`(1 处) | gate 挂接 | `openCodingPlanUpgrade` gate 早退:套餐升级弹窗全入口统一失效(#6) |
+| 2026-10-22 | `packages/ui/src/WorkspaceHelpMenuButton.tsx`(2 处)+ `WindowsCaptionMenuButton.tsx`(1 处)+ `quickpick/quickPickCommands.ts`(1 处)+ `ChatErrorBanner.tsx`(1 处) | gate 挂接 | 反馈表单:帮助菜单/Windows 标题栏/命令面板 feedback 命令/错误横幅反馈按钮随 gate 隐藏(#6) |
+| 2026-10-22 | `packages/ui/src/settings/AutomationsSection.tsx`(1 处) | gate 挂接 | `offPeakVisible` 追加 gate:闲时任务入口隐藏,定时任务不受影响(#6) |
+| 2026-10-22 | `packages/ui/src/hooks/useRemoteConnectionEntryVisibility.ts`(1 处) | gate 挂接 | 远程连接入口可见性随 gate:入口与远程 workspace 恢复全链隐藏(#6) |
+| 2026-10-22 | `packages/ui/src/v4/SessionPane.tsx`(1 处) | gate 挂接 | 左下角加速分享卡发布调用随 gate 跳过(#6) |
+| 2026-10-22 | `packages/desktop/src/main/desktopOAuthDeepLink.ts`(1 处)+ `desktopApplicationMenu.ts`(1 处) | gate 挂接 | main 侧 share import 深链接随 gate 忽略;原生菜单「问题上报」不注册(#6) |
+| 2026-10-22 | 单测调整 ×9 文件(loginDialogProviders/quickPickCommands/settingsNavigation/settingsPageConfig/rewardsProvider/rewardsMenuIcon/codingPlanUpgradeDialogProvider/chatErrorBannerFeedbackDraft/workspaceWebRemoteControlTrigger) | 测试 | 被裁剪功能牵连的既有单测改到 mae 语义;纯组件逻辑类以 `vi.mock` 显式放开 gate 保持上游行为验证(#6) |
+| 2026-10-22 | `packages/desktop/scripts/mae-identity.mjs` + `mae-identity.d.mts`(新增) | 身份模块 | mae 身份常量(D10)/默认翻转+授权守卫(D14)/运行名链/开发态 AUMID 唯一出口,构建期与运行期共用 |
+| 2026-10-22 | `packages/desktop/scripts/desktop-product-identity.mjs`(改,4 处薄挂接) | 挂接 | flavor 路由委托 mae 模块:未授权默认 mae、显式官方请求未授权抛错、授权后沿用官方语义(#8) |
+| 2026-10-22 | `packages/desktop/scripts/desktop-product-identity.d.mts`(改) | 挂接 | `DesktopProductFlavor` 联合类型、cuaHelperInstallVariant、identities 表加入 "mae"(#8) |
+| 2026-10-22 | `packages/desktop/src/main/desktopRuntimeEnv.ts`(改,3 处) | 挂接 | isMaePackagedRuntime / runtimeApplicationName 委托 mae 模块 / helper 变体 mae 分支;运行名链 ZCode Mae / ZCode Mae Dev(#8) |
+| 2026-10-22 | `packages/shared/src/env.ts`(改,2 处) | 挂接 | ZCodeProductFlavor 类型 + normalize 接受 "mae"(#8) |
+| 2026-10-22 | `packages/desktop/test/desktopProductIdentity.test.ts` / `viteRendererConfig.test.ts` / `tsupChunkIsolation.test.ts`(改,每处 1-3 行) | 测试适配 | 官方语义测试统一带 `ZCODE_ALLOW_OFFICIAL_IDENTITY=1`;默认期望翻转为 mae(#8) |
+| 2026-10-22 | `packages/desktop/test/mae-identity.test.ts` + `mae-runtime-identity.test.ts`(新增) | 测试 | 防丢网:默认身份=mae、未授权抛错、运行名链/helper 变体;挂接被 rebase 冲掉即红(#8) |
+| 2026-10-22 | `docs/mae/sync-runbook.md` + `docs/mae/customization-registry.md`(新增)+ 根 `MAE.md`(删除) | 文档重构 | MAE.md 按职能拆分:运维手册与定制台账分置,规则单一事实源回归 AGENTS.md 铁律,归位 docs/mae/ 自家约定;顺带清除 #15/#16 合并解冲突残留的 3 行 jj 多侧分隔垃圾行 |
+| 2026-10-22 | `AGENTS.md`(改,铁律①③指针)+ `specs/mae/README.md`(D6)+ `specs/mae/identity-isolation.md` + `docs/mae/agents/issue-tracker.md`(指针同步) | 引用更新 | 原 MAE.md 引用点全部改指新文件 |
