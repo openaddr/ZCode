@@ -8,9 +8,9 @@
 
 ## 铁律
 
-1. **写盘先开工作区**：任何改动（代码/文档/配置）先 `jj workspace add ../zcode-ws-<代号>` 再动手，主树 `@` 只读停靠。jj 命令配方与上游同步 runbook 见 [MAE.md](MAE.md)。
+1. **写盘先开工作区**：任何改动（代码/文档/配置）先 `jj workspace add ../zcode-ws-<代号>` 再动手，主树 `@` 只读停靠。jj 命令配方与上游同步 runbook 见 [docs/mae/sync-runbook.md](docs/mae/sync-runbook.md)。
 2. **交付走书签+PR**：`jj describe` → 独立书签 → `jj git push -b <书签>` → PR squash 合入；本地 `mae` 不前移、不直推。
-3. **定制隔离**：定制进新增文件（`packages/mae-*/`、`specs/mae/`、`docs/mae/`、`.agents/skills/`）；必须改上游文件时薄改（≤10 行）+ `// mae:` 标记 + MAE.md 定制清单登记。zcode-mae 独立版改动先读对应 spec（`specs/mae/`）。
+3. **定制隔离**：定制进新增文件（`packages/mae-*/`、`specs/mae/`、`docs/mae/`、`.agents/skills/`）；必须改上游文件时薄改（≤10 行）+ `// mae:` 标记 + docs/mae/customization-registry.md 台账登记。zcode-mae 独立版改动先读对应 spec（`specs/mae/`）。
 
 ## 硬性验证
 
