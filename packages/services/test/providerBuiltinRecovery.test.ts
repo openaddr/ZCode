@@ -6,6 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createProviderConfigRuntime } from "../src/model-provider/providerConfigRuntime.js";
 import { createProviderRuntimeFromConfigRuntime } from "../src/model-provider/providerRuntime.js";
 
+// mae: 外联静默默认会切断官方目录远端刷新;本文件验证官方刷新语义,显式授权官方身份(#7)
+process.env.ZCODE_ALLOW_OFFICIAL_IDENTITY = "1";
+
 describe("App Built-in / Account 失败恢复", () => {
   it("Account 新版解析失败保留完整旧 Registry；下一分钟在下载 TTL 内仅重建 Account", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });

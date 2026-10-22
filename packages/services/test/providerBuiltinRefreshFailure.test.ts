@@ -11,6 +11,9 @@ import { createAccountProviderConfig } from "./providerConfigFixtures.js";
 const plans = ["account:bigmodel-team-coding-plan", "account:bigmodel-start-plan"] as const;
 const cleanups: Array<() => Promise<void>> = [];
 
+// mae: 外联静默默认会切断官方目录远端刷新;本文件验证官方刷新失败语义,显式授权官方身份(#7)
+process.env.ZCODE_ALLOW_OFFICIAL_IDENTITY = "1";
+
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
   vi.restoreAllMocks();

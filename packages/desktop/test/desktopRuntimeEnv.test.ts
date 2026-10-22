@@ -490,28 +490,53 @@ describe("desktopRuntimeEnv buildHostProcessEnv", () => {
   });
 
   it("只把 Agent OTLP 配置定向注入 host，并剔除外部身份字段", async () => {
+    // mae: 官方定向注入语义在显式授权官方身份下验证;默认静默路径见下一条用例(#7)
+    process.env.ZCODE_ALLOW_OFFICIAL_IDENTITY = "1";
+    try {
+      const { buildHostProcessEnv } = await import("../src/main/desktopRuntimeEnv.js");
+
+      const env = buildHostProcessEnv({
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "https://arms.example.com/v1/traces",
+        OTEL_EXPORTER_OTLP_TRACES_HEADERS: "Authorization=secret",
+        ZCODE_TELEMETRY_USER_ID: "raw-oauth-user",
+        ZCODE_TELEMETRY_USER_SUBJECT_ID: "spoofed-user-subject",
+        ZCODE_TELEMETRY_IDENTITY_STATE: "authenticated",
+        ZCODE_TELEMETRY_DEVICE_MID: "spoofed-device",
+        ZCODE_TELEMETRY_RUNTIME_SURFACE: "standalone-cli",
+      });
+
+      expect(env).toMatchObject({
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "https://arms.example.com/v1/traces",
+        OTEL_EXPORTER_OTLP_TRACES_HEADERS: "Authorization=secret",
+      });
+      expect(env.ZCODE_TELEMETRY_USER_ID).toBeUndefined();
+      expect(env.ZCODE_TELEMETRY_USER_SUBJECT_ID).toBeUndefined();
+      expect(env.ZCODE_TELEMETRY_IDENTITY_STATE).toBeUndefined();
+      expect(env.ZCODE_TELEMETRY_DEVICE_MID).toBeUndefined();
+      expect(env.ZCODE_TELEMETRY_RUNTIME_SURFACE).toBeUndefined();
+      expect(env.ZCODE_TOOL_ENV_PASSTHROUGH_JSON).toBeUndefined();
+    } finally {
+      delete process.env.ZCODE_ALLOW_OFFICIAL_IDENTITY;
+    }
+  });
+
+  // mae: 外联静默——默认剥离继承环境里的 OTLP 端点,host/Agent 不外发(#7)
+  it("mae 默认静默:host env 不携带任何 OTLP 遥测键", async () => {
     const { buildHostProcessEnv } = await import("../src/main/desktopRuntimeEnv.js");
 
     const env = buildHostProcessEnv({
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "https://arms.example.com/v1/traces",
       OTEL_EXPORTER_OTLP_TRACES_HEADERS: "Authorization=secret",
-      ZCODE_TELEMETRY_USER_ID: "raw-oauth-user",
-      ZCODE_TELEMETRY_USER_SUBJECT_ID: "spoofed-user-subject",
-      ZCODE_TELEMETRY_IDENTITY_STATE: "authenticated",
-      ZCODE_TELEMETRY_DEVICE_MID: "spoofed-device",
-      ZCODE_TELEMETRY_RUNTIME_SURFACE: "standalone-cli",
+      OTEL_EXPORTER_OTLP_ENDPOINT: "https://arms.example.com/otlp",
+      OTEL_SERVICE_NAME: "zcode-cli-agent",
+      ZCODE_MODEL_TELEMETRY_ENABLED: "1",
     });
 
-    expect(env).toMatchObject({
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "https://arms.example.com/v1/traces",
-      OTEL_EXPORTER_OTLP_TRACES_HEADERS: "Authorization=secret",
-    });
-    expect(env.ZCODE_TELEMETRY_USER_ID).toBeUndefined();
-    expect(env.ZCODE_TELEMETRY_USER_SUBJECT_ID).toBeUndefined();
-    expect(env.ZCODE_TELEMETRY_IDENTITY_STATE).toBeUndefined();
-    expect(env.ZCODE_TELEMETRY_DEVICE_MID).toBeUndefined();
-    expect(env.ZCODE_TELEMETRY_RUNTIME_SURFACE).toBeUndefined();
-    expect(env.ZCODE_TOOL_ENV_PASSTHROUGH_JSON).toBeUndefined();
+    expect(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT).toBeUndefined();
+    expect(env.OTEL_EXPORTER_OTLP_TRACES_HEADERS).toBeUndefined();
+    expect(env.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
+    expect(env.OTEL_SERVICE_NAME).toBeUndefined();
+    expect(env.ZCODE_MODEL_TELEMETRY_ENABLED).toBeUndefined();
   });
 
   it("正式安装包默认配置只接收 OTLP 连接字段，不接受构建期身份字段", async () => {

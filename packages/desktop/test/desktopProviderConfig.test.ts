@@ -17,7 +17,8 @@ describe("resolveZCodeBuiltinProviderConfigFilePath", () => {
           appPath: "/Applications/ZCode.app/Contents/Resources/app.asar",
           // 隔离宿主环境变量：ZCode 开发运行时会注入 ZCODE_BUILTIN_PROVIDER_CONFIG_FILE，
           // 不显式清空会让本机跑单测时短路进 explicitPath 分支（CI 无此变量所以一直是绿的）。
-          env: {},
+          // mae: 默认外联静默会切换到 mae 目录；官方布局断言需显式授权官方身份(#7)
+          env: { ZCODE_ALLOW_OFFICIAL_IDENTITY: "1" },
         }),
       ),
     ).toBe("/Applications/ZCode.app/Contents/Resources/config/provider/zcode-builtin.json");
@@ -27,7 +28,7 @@ describe("resolveZCodeBuiltinProviderConfigFilePath", () => {
         resolveZCodeBuiltinProviderConfigFilePath({
           isPackaged: false,
           appPath: "/repo/packages/desktop",
-          env: {},
+          env: { ZCODE_ALLOW_OFFICIAL_IDENTITY: "1" },
         }),
       ),
     ).toBe("/repo/config/provider/zcode-builtin.test.json");
@@ -63,7 +64,55 @@ describe("开发态按编译环境选取配置", () => {
         }),
       ),
     ).toBe(
-      `/repo/config/provider/${environment === "production" ? "zcode-builtin.json" : "zcode-builtin.test.json"}`,
+      // mae: 默认外联静默下开发态同样落到 mae 裁剪目录,编译期环境只决定 prod/test 孪生文件(#7)
+      `/repo/config/provider/${environment === "production" ? "mae-builtin.json" : "mae-builtin.test.json"}`,
     );
+  });
+});
+
+// mae: 外联静默默认启用——目录解析默认指向 mae 裁剪目录;显式 ZCODE_ALLOW_OFFICIAL_IDENTITY=1 时恢复官方目录(#7)
+describe("mae 外联静默:内置 provider 目录本地化", () => {
+  it("默认解析 mae 目录(打包态与开发态)", () => {
+    expect(
+      toPosixPath(
+        resolveZCodeBuiltinProviderConfigFilePath({
+          isPackaged: true,
+          resourcesPath: "/Applications/ZCodeMae.app/Contents/Resources",
+          env: {},
+        }),
+      ),
+    ).toBe("/Applications/ZCodeMae.app/Contents/Resources/config/provider/mae-builtin.json");
+
+    expect(
+      toPosixPath(
+        resolveZCodeBuiltinProviderConfigFilePath({
+          isPackaged: false,
+          appPath: "/repo/packages/desktop",
+          env: {},
+        }),
+      ),
+    ).toBe("/repo/config/provider/mae-builtin.test.json");
+  });
+
+  it("显式 ZCODE_BUILTIN_PROVIDER_CONFIG_FILE 仍优先于 mae 默认", () => {
+    expect(
+      resolveZCodeBuiltinProviderConfigFilePath({
+        env: { ZCODE_BUILTIN_PROVIDER_CONFIG_FILE: "/fixtures/custom.json" },
+        isPackaged: true,
+        resourcesPath: "/Applications/ZCodeMae.app/Contents/Resources",
+      }),
+    ).toBe("/fixtures/custom.json");
+  });
+
+  it("ZCODE_ALLOW_OFFICIAL_IDENTITY=1 恢复官方目录解析", () => {
+    expect(
+      toPosixPath(
+        resolveZCodeBuiltinProviderConfigFilePath({
+          isPackaged: true,
+          resourcesPath: "/Applications/ZCode.app/Contents/Resources",
+          env: { ZCODE_ALLOW_OFFICIAL_IDENTITY: "1" },
+        }),
+      ),
+    ).toBe("/Applications/ZCode.app/Contents/Resources/config/provider/zcode-builtin.json");
   });
 });

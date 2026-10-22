@@ -131,6 +131,8 @@ describe("desktop tsup chunk isolation", () => {
   it("正式安装包 Agent OTLP 配置应映射为 Main 使用的标准环境字段", () => {
     expect(
       resolveBuildPackagedAgentTelemetryEnv({
+        // mae: 官方 OTLP 注入语义在显式授权官方身份下验证;默认静默路径见 tsupMaeTelemetrySilence.test.ts(#7)
+        ZCODE_ALLOW_OFFICIAL_IDENTITY: "1",
         ZCODE_ENV: "production",
         ZCODE_PACKAGED_AGENT_OTEL_ENDPOINT: "https://arms.example.com/otlp",
         ZCODE_PACKAGED_AGENT_OTEL_HEADERS: "x-arms-license-key=write-only",
@@ -147,12 +149,14 @@ describe("desktop tsup chunk isolation", () => {
   it("正式安装包 Agent OTLP 配置不完整或生产环境使用 HTTP 时应阻止构建", () => {
     expect(() =>
       resolveBuildPackagedAgentTelemetryEnv({
+        ZCODE_ALLOW_OFFICIAL_IDENTITY: "1", // mae: 官方校验语义需显式授权(#7)
         ZCODE_ENV: "production",
         ZCODE_PACKAGED_AGENT_OTEL_ENDPOINT: "https://arms.example.com/otlp",
       }),
     ).toThrow("must be configured together");
     expect(() =>
       resolveBuildPackagedAgentTelemetryEnv({
+        ZCODE_ALLOW_OFFICIAL_IDENTITY: "1", // mae: 官方校验语义需显式授权(#7)
         ZCODE_ENV: "production",
         ZCODE_PACKAGED_AGENT_OTEL_ENDPOINT: "http://arms.example.com/otlp",
         ZCODE_PACKAGED_AGENT_OTEL_HEADERS: "x-arms-license-key=write-only",
@@ -164,12 +168,14 @@ describe("desktop tsup chunk isolation", () => {
     expect(resolveBuildPackagedAgentTelemetryEnv({})).toEqual({});
     expect(() =>
       resolveBuildPackagedAgentTelemetryEnv({
+        ZCODE_ALLOW_OFFICIAL_IDENTITY: "1", // mae: 官方发布校验需显式授权(#7)
         CI: "true",
         CI_COMMIT_BRANCH: "release/current",
       }),
     ).toThrow("required for release builds");
     expect(() =>
       resolveBuildPackagedAgentTelemetryEnv({
+        ZCODE_ALLOW_OFFICIAL_IDENTITY: "1", // mae: 官方发布校验需显式授权(#7)
         CI: "true",
         CI_COMMIT_TAG: "v3.6.0",
       }),
