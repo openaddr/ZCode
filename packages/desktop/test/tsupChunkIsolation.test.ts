@@ -188,7 +188,8 @@ describe("desktop tsup chunk isolation", () => {
       const defines = getDefines(entry);
       expect(defines).toHaveProperty("__ZCODE_ENV__");
       expect(defines).toHaveProperty("__ZCODE_PRODUCT_FLAVOR__");
-      expect(["\"production\"", "\"preview\""]).toContain(defines.__ZCODE_PRODUCT_FLAVOR__);
+      // mae: D14 默认翻转后默认注入 "mae";授权构建仍可注入官方 flavor
+      expect(["\"production\"", "\"preview\"", "\"mae\""]).toContain(defines.__ZCODE_PRODUCT_FLAVOR__);
     }
   });
 
