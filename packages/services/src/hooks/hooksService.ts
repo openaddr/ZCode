@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
+import { resolveMaeAwareUserHomeDir } from "@zcode/shared/mae"; // mae: 用户级 home 解析委托统一 resolver(#25)
 import type {
   Hook,
   HookEvent,
@@ -49,8 +50,10 @@ interface ZCodeConfigFile {
 }
 
 function resolveUserHomeDir(): string {
-  const envHome = process.env.HOME?.trim() || process.env.USERPROFILE?.trim();
-  return envHome && envHome.length > 0 ? envHome : homedir();
+  // mae: 用户级 home 与 settingService 同链(ZCODE_DESKTOP_HOME_DIR 优先)——mae 身份下
+  // 用户级 hooks 配置/trust store 落 ~/.zcode-mae 数据树,官方身份行为不变;顺带治好
+  // hooks 与数据轴对 ~/.zcode/cli 的双解析错位(#25)
+  return resolveMaeAwareUserHomeDir() ?? homedir();
 }
 
 function getRootDir(source: SettingsDirectorySource, workspacePath?: string): string {

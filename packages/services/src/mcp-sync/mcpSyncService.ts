@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, posix, win32 } from "node:path";
+import { resolveMaeAwareUserHomeDir } from "@zcode/shared/mae"; // mae: 用户级 home 解析委托统一 resolver(#25)
 import type {
   LoadCliMcpFromUserDirectoryRequest,
   LoadCliMcpFromUserDirectoryResult,
@@ -154,9 +155,9 @@ export function createMcpSyncService(
 }
 
 function resolveUserHomeDir(): string {
-  return (
-    process.env.HOME?.trim() || process.env.USERPROFILE?.trim() || homedir()
-  );
+  // mae: 用户级 home 与 settingService 同链(ZCODE_DESKTOP_HOME_DIR 优先)——mae 身份下
+  // 用户级 MCP 配置落 ~/.zcode-mae 数据树,官方身份行为不变(#25)
+  return resolveMaeAwareUserHomeDir() ?? homedir();
 }
 
 function buildDirectoryConfigPath(

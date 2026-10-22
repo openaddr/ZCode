@@ -11,3 +11,5 @@ export {
 } from "./providerCatalogFilter.js";
 // mae: 深链接 scheme 唯一定义经公共入口再导出,desktop/web 消费方统一引用(#10)
 export { MAE_DEEP_LINK_SCHEME } from "./deeplinkScheme.mjs";
+// mae: 用户级 home 统一 resolver 经公共入口再导出,services 消费方统一引用(#25)
+export { resolveMaeAwareUserHomeDir } from "./userHome.js";
