@@ -54,6 +54,7 @@ jj git push -b <书签>          # 4. 推送
 - **workspace 分工**:workspace 无 `.git`,`architecture:check` / `test:unit:affected` 等 git 集成脚本在里面必炸。workspace 只跑 `typecheck`/`lint`;git 类校验回主树检出书签(`jj new <书签>`)后跑。
 - **affected 选择器命中全量套件时会"跳过执行"**——那不是通过。以定向 `pnpm vitest run <涉改测试文件>` 作为真实执行证据。
 - **绿灯前先断言改动在树上**:跑测试前 `test -f <新文件>` 确认检出的是目标提交(停错树跑出的绿是假绿,2026-10-22 险情)。
+- **PR 合入后必须补跑合并区间单测**:每张 PR 独立验证 ≠ 组合体验证——squash 合入后对合并区间跑定向 vitest。2026-10-22 实锤:#15 组合体带着 4 个 session-share gate 失败上树,直到 #10 agent 实测才暴露(合并后只跑了 typecheck/lint 的缺口)。
 
 ## 4. 冲突与救援(2026-10-22 实锤沉淀)
 
