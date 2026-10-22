@@ -24,7 +24,9 @@ import {
   getExportLogDir as getDefaultExportLogDir,
   getExportLogStageDir as getDefaultExportLogStageDir,
   getFeedbackLogArchiveDir as getDefaultFeedbackLogArchiveDir,
+  getZCodeDataRootDir,
 } from "@zcode/services/node";
+import { ZCODE_PRODUCT_FLAVOR } from "@zcode/shared";
 import { createAboutSnapshot, formatAboutDetail, readBuildMetadata } from "./about.js";
 import { logger } from "./logger.js";
 
@@ -32,8 +34,14 @@ function getZCodeDataDir() {
   return getAppConfigDir();
 }
 
+// mae: mae 身份的 cli 目录与 helper run 目录随 mae 数据根解析——诊断导出只含 mae 自己的
+// 数据,不打包官方副本(#24);官方身份保持 ~/.zcode
+function getZCodeHomeRootDir() {
+  return ZCODE_PRODUCT_FLAVOR === "mae" ? getZCodeDataRootDir() : join(homedir(), ".zcode");
+}
+
 function getZCodeCliDir() {
-  return join(homedir(), ".zcode", "cli");
+  return join(getZCodeHomeRootDir(), "cli");
 }
 
 function getZCodeCliLogDir() {
@@ -46,7 +54,7 @@ function getZCodeCliLogDir() {
  * helperExitLogPathFor）。同目录下还有 `.tokens` broker 凭据，收集时必须按文件名白名单。
  */
 function getCuaHelperRunDir() {
-  return join(homedir(), ".zcode", "computer-use", "run");
+  return join(getZCodeHomeRootDir(), "computer-use", "run");
 }
 
 function isCuaHelperDiagnosticFileName(fileName: string): boolean {

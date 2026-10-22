@@ -606,6 +606,9 @@ export function buildHostProcessEnv(hostProcessLocalEnv: Record<string, string>)
     // 工作树或根据安装路径猜测；否则同一产品版本的不同修复包无法在 ARMS 中区分。
     [ZCODE_BUILD_COMMIT_ID_ENV]: ZCODE_COMMIT,
     ...(dataBaseDir !== homedir() ? { ZCODE_DATA_BASE_DIR: dataBaseDir } : {}),
+    // mae: 注入 CLI 存储根环境变量(mae 数据根)——Agent 侧 exec 输出/剪贴板/SEA 运行时/插件与技能存储
+    // 已读 ZCODE_STORAGE_DIR,随轴落 mae 树(#24);官方身份不注入,保留上游 ~/.zcode 语义
+    ...(ZCODE_PRODUCT_FLAVOR === "mae" ? { ZCODE_STORAGE_DIR: getZCodeDataRootDir() } : {}),
     ...(windowsAppInstallDir ? { [ZCODE_WINDOWS_APP_INSTALL_DIR_ENV]: windowsAppInstallDir } : {}),
     ...(bundledCuaHelperAppPath
       ? { [ZCODE_CUA_BUNDLED_HELPER_APP_PATH_ENV]: bundledCuaHelperAppPath }
