@@ -128,6 +128,8 @@ import type {
   DeviceAdditionReturnTarget,
   RemoteConnectionOpenPreference,
 } from "@/app-shell/types.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 
 const DEFAULT_LUCIDE_STROKE_WIDTH = 1.5;
 type WelcomeScreenOpenReason =
@@ -213,7 +215,8 @@ function RootInner({
   allowOpenWorkspace = true,
   preferDirectoryBrowser,
   supportsEmbeddedBrowser: explicitSupportsEmbeddedBrowser,
-  allowRemoteWorkspace = true,
+  // mae: D7 纯本地模式——SSH/WSL/Docker 远程工作区入口默认随 gate 隐藏(#6);显式传参(如 Web)不受影响
+  allowRemoteWorkspace = isFeatureVisible("remote-workspace"),
   webRemoteControlWorkspaceSwitcher,
   initialSidebarFileTreeOpen,
   initialWebRemoteControlMobileNavigationIntent,
@@ -1502,7 +1505,8 @@ function RootInner({
     onCreateTask: handleCreateTask,
     onOpenWorkspace: handleOpenWorkspace,
     allowOpenWorkspace,
-    onLogin: !user ? handleOpenLoginEntry : undefined,
+    // mae: D7 纯本地模式——账号登录入口隐藏(#6)
+    onLogin: !user && isFeatureVisible("account-login") ? handleOpenLoginEntry : undefined,
     onLogout: user ? handleLogout : undefined,
     user,
   };
@@ -1642,7 +1646,10 @@ function RootInner({
                 allowRemoteWorkspace={allowRemoteWorkspace}
                 handleBackFromSettings={handleBackFromSettings}
                 handleLogout={user ? handleLogout : undefined}
-                onLogin={!user ? handleOpenLoginEntry : undefined}
+                onLogin={
+                  // mae: D7 纯本地模式——账号登录入口隐藏(#6)
+                  !user && isFeatureVisible("account-login") ? handleOpenLoginEntry : undefined
+                }
                 user={user}
                 reconnectingRemoteWorkspaceKeys={reconnectingRemoteWorkspaceKeys}
                 remoteWorkspaceRecoveryByWorkspaceKey={remoteWorkspaceRecoveryByWorkspaceKey}

@@ -2,6 +2,8 @@ import { DesktopCommandIds } from "@zcode/shared";
 import type { UpdateStatePayload } from "@zcode/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useFeedbackStore } from "@/feedback/feedbackStore.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 import { usePlatform } from "@/hooks/usePlatform.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { createHelpMenuActionHandlers } from "@/lib/helpMenuActions.js";
@@ -262,12 +264,17 @@ export function WindowsCaptionMenuButton({
           {intl.formatMessage({ id: "titleBar.menu.help.resourceManager" })}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={helpMenuActions.openIssueReport}>
-          {intl.formatMessage({ id: "titleBar.menu.help.feedback" })}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={openFeatureRequest}>
-          {intl.formatMessage({ id: "workspaceHeader.help.productRequest" })}
-        </DropdownMenuItem>
+        {/* mae: D7 纯本地模式——问题上报/功能建议入口随 gate 隐藏(#6) */}
+        {isFeatureVisible("feedback") ? (
+          <>
+            <DropdownMenuItem onSelect={helpMenuActions.openIssueReport}>
+              {intl.formatMessage({ id: "titleBar.menu.help.feedback" })}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={openFeatureRequest}>
+              {intl.formatMessage({ id: "workspaceHeader.help.productRequest" })}
+            </DropdownMenuItem>
+          </>
+        ) : null}
         {showCommunityMenuItem ? (
           <DropdownMenuItem
             onSelect={() => handleExecuteDesktopCommand(DesktopCommandIds.OpenCommunity)}

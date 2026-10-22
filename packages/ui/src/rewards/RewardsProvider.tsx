@@ -14,6 +14,8 @@ import { useZCodeStore } from "@/store/StoreProvider.js";
 import { resolveTheme } from "@/useTheme.js";
 import { RewardsWebview } from "@/rewards/RewardsWebview.js";
 import { logger } from "@/logger.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 
 const RewardsContext = createContext<(() => Promise<void>) | null>(null);
 export const useOpenRewards = () => useContext(RewardsContext);
@@ -31,6 +33,8 @@ export function RewardsProvider({
   const user = useZCodeStore((s) => s.user);
   const loginAttempt = useZCodeStore((s) => s.loginEntryAttempt);
   const requestLogin = useZCodeStore((s) => s.requestLoginEntry);
+  // mae: D7 纯本地模式——奖励中心禁用时 Provider 只透传 children,上下文与 webview 均不挂载(#6)
+  const maeRewardsVisible = isFeatureVisible("rewards");
   // 登录后营销实例会重建；续接意图由窗口级 Provider 持有，不能挂在旧 controller 上。
   const pendingLogin = useRef<number | null>(null);
   const openPage = useCallback(async () => {
@@ -69,6 +73,7 @@ export function RewardsProvider({
       void openPage().catch((error) => logger.warn("[rewards] 登录后打开失败", { error }));
     }
   }, [loginAttempt, user, openPage]);
+  if (!maeRewardsVisible) return <>{children}</>;
   return (
     <RewardsContext.Provider value={open}>
       {children}

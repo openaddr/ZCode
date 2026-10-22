@@ -145,6 +145,8 @@ import {
   type SavedWorkflowsOpenTarget,
 } from "@/settings/saved-workflows/SavedWorkflowsSection.js";
 import { AutomationTemplateSkeletonGrid } from "@/settings/AutomationTemplateSkeletonGrid.js";
+// mae: D7 纯本地模式——feature gate 唯一所有者的消费点(#6)
+import { isFeatureVisible } from "@/mae/featureGates.js";
 
 interface AutomationsSectionProps {
   workspacePath?: string | null;
@@ -637,7 +639,10 @@ export function AutomationsSection({
       !offPeakStoreLoading &&
       !isCurrentOffPeakCodingPlanSupported(offPeakCodingPlanSupport, sharedSettings));
   const offPeakVisible =
-    !currentWorkspaceIsRemote && (offPeakGrayEnabled || offPeakTasks.length > 0);
+    // mae: D7 纯本地模式——闲时任务入口随 gate 隐藏(#6)
+    isFeatureVisible("off-peak-tasks") &&
+    !currentWorkspaceIsRemote &&
+    (offPeakGrayEnabled || offPeakTasks.length > 0);
   const hasAnyTasks = automations.length > 0 || offPeakTasks.length > 0;
   const visibleTabs = resolveVisibleAutomationTabs({
     hasAnyTasks,
