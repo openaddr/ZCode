@@ -17,10 +17,9 @@ import {
 } from "./scripts/node-pty-package-assets.mjs";
 import { cleanupPackagedSourcemaps } from "./scripts/packaged-sourcemap-cleanup.mjs";
 import { getTargetPlatform } from "./scripts/target-platform.mjs";
-import {
-  resolveDesktopArtifactSuffix,
-  resolveDesktopProductIdentity,
-} from "./scripts/desktop-product-identity.mjs";
+import { resolveDesktopArtifactSuffix, resolveDesktopProductIdentity } from "./scripts/desktop-product-identity.mjs";
+// mae: 深链接 scheme 唯一定义(shared/src/mae/deeplinkScheme.mjs),构建脚本与运行期共用(#10)
+import { MAE_DEEP_LINK_SCHEME } from "../shared/src/mae/deeplinkScheme.mjs";
 import { createWindowsPowerShellSecurityArgs } from "./scripts/powershell-command.mjs";
 import { isSharpRequiredByComputerUse, verifyStagedSharp } from "./scripts/sharp-package-assets.mjs";
 import { isRealComputerUseProducerInstalled } from "./scripts/computer-use-producer.mjs";
@@ -813,10 +812,11 @@ export default {
   // OAuth deep link 协议注册（macOS 打包后需要 Info.plist 中声明 CFBundleURLTypes）
   protocols: [
     {
-      // 协议处理器的展示名之前使用小写 scheme，打包产物里的协议描述无法体现产品名。
-      // 展示名跟随安装包身份；scheme 仍保持 zcode，因此两个应用中最后注册者会成为默认 handler。
+      // 协议处理器的展示名跟随安装包身份。
+      // mae: schemes 随身份——mae 注册自有 zcode-mae 协议(官方 zcode:// 不拉起 mae,#10);
+      // 显式授权的官方身份保留上游 zcode,供对照调试。
       name: desktopProductIdentity.productName,
-      schemes: ["zcode"],
+      schemes: [desktopProductIdentity.flavor === "mae" ? MAE_DEEP_LINK_SCHEME : "zcode"],
     },
   ],
   mac: {

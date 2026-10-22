@@ -85,7 +85,7 @@ describe("ConversationShareLandingPage", () => {
     expect(html).toContain("去 ZCode 继续");
     expect(html).toContain('data-share-theme-toggle="true"');
     expect(html).toContain("切换到深色主题");
-    expect(html.match(/href="zcode:\/\/share\/import\?code=share-1"/g)?.length).toBe(2);
+    expect(html.match(/href="zcode-mae:\/\/share\/import\?code=share-1"/g)?.length).toBe(2);
     expect(html).not.toContain("Sign out");
   });
 
@@ -230,7 +230,7 @@ describe("ConversationShareLandingPage", () => {
         locale: "en-US",
       }),
     );
-    expect(html).not.toContain("zcode://share/import");
+    expect(html).not.toContain("zcode-mae://share/import");
     expect(html).not.toContain("Open in ZCode");
     expect(html).not.toContain("去 ZCode 继续");
     expect(html).toContain('data-share-theme-toggle="true"');

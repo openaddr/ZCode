@@ -20,6 +20,8 @@ import {
 import { registerLinuxDeepLinkProtocol } from "./desktopLinuxDeepLinkRegistration.js";
 // mae: D7 纯本地模式——feature gate(main 侧对应物)的消费点(#6)
 import { isDesktopFeatureDisabled } from "./mae/featureGates.js";
+// mae: 运行期协议注册走自有 zcode-mae scheme——注册官方 zcode 会劫持官方安装的协议归属(#10)
+import { MAE_DEEP_LINK_SCHEME } from "@zcode/shared/mae";
 
 interface DeepLinkWorkspaceGateOptions {
   canOpenWorkspace?: (workspacePath: string) => boolean;
@@ -280,7 +282,7 @@ export function handleDeepLink(
     const targetWindow = options.resolveApplicationWindow
       ? options.resolveApplicationWindow()
       : (BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null);
-    // zcode://workspace/open 来自浏览器/IM 等外部应用，不能等同于用户在
+    // zcode-mae://workspace/open 来自浏览器/IM 等外部应用，不能等同于用户在
     // ZCode 内部选择目录；确认必须发生在 statSync 之前，避免项目配置被静默信任。
     if (
       !confirmExternalWorkspaceOpen(workspacePath, logger, targetWindow, options.confirmationCopy)
@@ -405,7 +407,7 @@ export function registerDeepLinkProtocol(
   },
   options: { iconPath?: string } = {},
 ) {
-  const scheme = "zcode";
+  const scheme = MAE_DEEP_LINK_SCHEME;
 
   // 外部 URL 必须位于 -- 后；否则 Windows 引号拆分可把 URL 内容变成 Electron 启动参数。
   // Inspector 早于应用 JS 和单实例锁启动，不能依赖后续 handleDeepLink 校验拦截。

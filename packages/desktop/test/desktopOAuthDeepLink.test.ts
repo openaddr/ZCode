@@ -331,27 +331,27 @@ describe("desktopOAuthDeepLink OAuth routing", () => {
       registerOAuthState(31, { state: "state-001", provider: "bigmodel" });
 
       expect(
-        handleDeepLink("zcode://oauth/callback?state=state-001&utm_source=google", logger),
+        handleDeepLink("zcode-mae://oauth/callback?state=state-001&utm_source=google", logger),
       ).toBe(true);
       expect(targetWindow.webContents.send).toHaveBeenCalledWith(
         PlatformChannels.OAuthCallback,
-        "zcode://oauth/callback?state=state-001&utm_source=google",
+        "zcode-mae://oauth/callback?state=state-001&utm_source=google",
       );
 
       targetWindow.webContents.send.mockClear();
 
       expect(
-        handleDeepLink("zcode://oauth/callback?authCode=auth-001&state=state-001", logger),
+        handleDeepLink("zcode-mae://oauth/callback?authCode=auth-001&state=state-001", logger),
       ).toBe(true);
       expect(targetWindow.webContents.send).toHaveBeenCalledWith(
         PlatformChannels.OAuthCallback,
-        "zcode://oauth/callback?authCode=auth-001&state=state-001",
+        "zcode-mae://oauth/callback?authCode=auth-001&state=state-001",
       );
 
       targetWindow.webContents.send.mockClear();
 
       expect(
-        handleDeepLink("zcode://oauth/callback?authCode=auth-002&state=state-001", logger),
+        handleDeepLink("zcode-mae://oauth/callback?authCode=auth-002&state=state-001", logger),
       ).toBe(false);
       expect(targetWindow.webContents.send).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenLastCalledWith(
@@ -388,11 +388,11 @@ function createMockWindow(webContentsId: number) {
 }
 
 function buildWorkspaceOpenUrl(workspacePath: string): string {
-  return `zcode://workspace/open?path=${encodeURIComponent(workspacePath)}`;
+  return `zcode-mae://workspace/open?path=${encodeURIComponent(workspacePath)}`;
 }
 
 function buildShareImportUrl(shareCode: string): string {
-  return `zcode://share/import?code=${encodeURIComponent(shareCode)}`;
+  return `zcode-mae://share/import?code=${encodeURIComponent(shareCode)}`;
 }
 
 describe("desktopOAuthDeepLink share import routing", () => {
