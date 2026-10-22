@@ -35,3 +35,15 @@ export function resolveMaeRuntimeApplicationName(options: {
   isLocalDevelopmentRuntime: boolean;
   productFlavor: "mae" | "production" | "preview";
 }): string;
+/** mae 业务数据基目录名(D10:~/.zcode-mae,其下 .zcode 与官方 ~/.zcode 零交集)。 */
+export const MAE_DATA_BASE_DIR_NAME: ".zcode-mae";
+/** mae 数据基目录:HOME→os.homedir() 兜底链上拼 .zcode-mae。 */
+export function resolveMaeDataBaseDir(env?: Record<string, string | undefined>): string;
+/**
+ * mae 数据根启动决策(#9):mae 身份且无显式 ZCODE_DATA_BASE_DIR 覆盖时返回 ~/.zcode-mae,
+ * 官方身份或显式覆盖时返回 null(保留上游语义)。
+ */
+export function resolveMaeDataRootBootstrap(
+  productFlavor: string,
+  env?: Record<string, string | undefined>,
+): string | null;
