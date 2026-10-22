@@ -15,6 +15,14 @@ const fsMocks = vi.hoisted(() => ({
   statSync: vi.fn(),
 }));
 
+// mae: session-share 默认被 feature gate 禁用;本文件验证的是上游 share import 路由行为,
+// 按 #6 的适配模式显式放开 gate,保持上游行为验证不丢失(gate 语义由 maeFeatureGates.test.ts 互锁覆盖)。
+vi.mock("../src/main/mae/featureGates.js", () => ({
+  DESKTOP_MAE_FEATURE_KEYS: ["account-login", "coding-plan", "session-share", "off-peak-tasks", "feedback", "marketing-banner", "rewards", "web-remote-control", "bots", "remote-workspace"],
+  DESKTOP_DISABLED_FEATURES: new Set<string>(),
+  isDesktopFeatureDisabled: () => false,
+}));
+
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
   fsMocks.statSync.mockImplementation(actual.statSync);
