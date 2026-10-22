@@ -5,6 +5,9 @@
  */
 export const ZCODE_PREVIEW_IDENTITY_ENV = "ZCODE_PREVIEW_IDENTITY";
 
+// mae: 身份常量/默认翻转/授权守卫委托自有模块 mae-identity.mjs(specs/mae/identity-isolation.md)
+import { MAE_DEV_APP_USER_MODEL_ID, MAE_IDENTITY, resolveMaeAwareProductFlavor } from "./mae-identity.mjs";
+
 const PRODUCTION_IDENTITY = Object.freeze({
   flavor: "production",
   appId: "dev.zcode.app",
@@ -26,6 +29,7 @@ const PREVIEW_IDENTITY = Object.freeze({
 export const desktopProductIdentities = Object.freeze({
   production: PRODUCTION_IDENTITY,
   preview: PREVIEW_IDENTITY,
+  mae: MAE_IDENTITY, // mae: 默认身份(D10/D14,specs/mae/identity-isolation.md)
 });
 
 function normalizeDesktopZCodeEnv(env) {
@@ -57,6 +61,14 @@ export function isPreviewIdentityRequested(env = process.env) {
  * 未知 `ZCODE_ENV` 继续按 test 处理，和共享层 normalizeZCodeEnv 的 fail-safe 默认值一致。
  */
 export function resolveDesktopProductFlavor(env = process.env) {
+  // mae: D14 默认身份翻转+授权守卫——委托 mae-identity 模块(未授权默认 mae,官方身份须显式授权)
+  return resolveMaeAwareProductFlavor(env, {
+    isPreviewRequested: isPreviewIdentityRequested(env),
+    officialFlavor: resolveOfficialDesktopProductFlavor(env),
+  });
+}
+
+function resolveOfficialDesktopProductFlavor(env) {
   if (isPreviewIdentityRequested(env)) {
     return "preview";
   }
@@ -84,9 +96,12 @@ export function resolveDesktopArtifactSuffix(env = process.env) {
  */
 export function resolveWindowsAppUserModelIdForFlavor(flavor, runtime = { isPackaged: true }) {
   if (runtime.isPackaged === false) {
-    return "cn.aminer.zcode";
+    // mae: 开发态 AUMID 随身份隔离,mae 开发快捷方式不污染官方/打包 Shell 身份
+    return flavor === "mae" ? MAE_DEV_APP_USER_MODEL_ID : "cn.aminer.zcode";
   }
-  return desktopProductIdentities[flavor === "preview" ? "preview" : "production"].appId;
+  return desktopProductIdentities[
+    flavor === "preview" ? "preview" : flavor === "mae" ? "mae" : "production"
+  ].appId;
 }
 
 export function resolveWindowsAppUserModelId(env = process.env, runtime = { isPackaged: true }) {

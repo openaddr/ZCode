@@ -6,7 +6,8 @@
  * 导致 main/index.ts 导入 resolveWindowsAppUserModelIdForFlavor 时报 TS2724。
  * 改 .mjs 导出时必须同步本文件。
  */
-export type DesktopProductFlavor = "production" | "preview";
+// mae: flavor 联合类型加入 "mae"(D14 默认翻转),变体含 "mae"
+export type DesktopProductFlavor = "production" | "preview" | "mae";
 
 export interface DesktopProductIdentity {
   readonly flavor: DesktopProductFlavor;
@@ -14,7 +15,7 @@ export interface DesktopProductIdentity {
   readonly productName: string;
   readonly linuxExecutableName: string;
   readonly linuxPackageName: string;
-  readonly cuaHelperInstallVariant: "preview" | null;
+  readonly cuaHelperInstallVariant: "preview" | "mae" | null;
 }
 
 export const ZCODE_PREVIEW_IDENTITY_ENV: "ZCODE_PREVIEW_IDENTITY";
@@ -38,4 +39,5 @@ export function resolveWindowsAppUserModelId(
 export const desktopProductIdentities: Readonly<{
   production: DesktopProductIdentity;
   preview: DesktopProductIdentity;
+  mae: DesktopProductIdentity; // mae: 默认身份条目(D14)
 }>;
