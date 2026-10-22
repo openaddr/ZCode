@@ -104,4 +104,5 @@ jj bookmark move mae --to @ && jj git push -b mae
 | 2026-10-21 | `AGENTS.md`（改，核心原则首条末尾） | 指针补全 | 补 `specs/mae/` 指向。**AGENTS.md 为例外文件**：为 mae 项目目标可修改，接受同步冲突成本（用户裁决）；触碰照旧在此登记 |
 | 2026-10-21 | `docs/mae/agents/`（新增目录：issue-tracker + triage-labels + domain） | 技能配置 | matt-pocock 技能体系的 mae 侧配置：GitHub Issues 跟踪（`gh --repo openaddr/ZCode`，与上游本地 Markdown 约定区分）、五角色标签（已建）、mae 单上下文领域文档（`docs/mae/GLOSSARY.md` + `docs/mae/adr/` 独立编号） |
 | 2026-10-21 | `AGENTS.md`（改，末尾追加 Agent Skills 节） | 入口补全 | 指向 `docs/mae/agents/` 三份配置；声明上游 `docs/agents/`、`docs/issues/` 约定不适用于本 fork |
+| 2026-10-22 | `.gitattributes`（改，`*.bat`/`*.cmd` 例外口径） | 口径 | jj 按字节快照下 `text eol=crlf` 要求 blob 归一 LF，与上游 CRLF blob 形成永久幻影 M（实锤挡住 affected 脏树门）；改 `-text` 逐字节保真。另：rebase 后 git index 陈旧会造成全树幻影，`rm .git/index && git reset --mixed HEAD` 重建即清 |
 | 2026-10-22 | `AGENTS.md`（重写为我方薄宪法层）+ `upstream-AGENTS.md`（新增，85 行上游快照） | 结构变更 | **所有权模型**：AGENTS.md 归 mae（铁律/规则层级/Agent Skills），上游规则降级为快照引用、冲突以我方为准；同步冲突固定解法见「四」runbook，原「例外文件」条款作废 |
