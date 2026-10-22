@@ -15,18 +15,24 @@ import {
   ZCODE_VERSION,
 } from "@zcode/shared";
 import { createCustomAboutDialogHtml } from "./aboutWindow.js";
+// mae: 关于页上游基线行(#11)——文案与留空策略在 mae 模块,此处薄挂接
+import { formatUpstreamBaseLine } from "./mae/aboutUpstreamBase.js";
 
 interface DesktopBuildMetadata {
   appVersion?: string;
   buildCommitId?: string;
   buildTime?: string;
   electronBuilderVersion?: string;
+  upstreamBase?: string; // mae: #11
+  upstreamBaseCommit?: string; // mae: #11
 }
 
 interface AboutSnapshot {
   appVersion: string;
   buildCommitId: string;
   buildTime: string;
+  upstreamBase: string; // mae: #11
+  upstreamBaseCommit: string; // mae: #11
   environment: string;
   electronVersion: string;
   electronBuilderVersion: string;
@@ -86,6 +92,9 @@ const ABOUT_MESSAGES: Record<
     copyright: (year) => `Copyright © ${year} ZCode.`,
   },
 };
+
+// mae: #11 — 上游基线行出口(实现位于 mae 模块,about 弹窗与测试共用)
+export { formatUpstreamBaseLine } from "./mae/aboutUpstreamBase.js";
 
 function normalizeValue(value: string | undefined | null): string {
   if (typeof value !== "string") {
@@ -157,6 +166,8 @@ export function createAboutSnapshot(options: AboutSnapshotOptions = {}): AboutSn
     appVersion: normalizeValue(options.appVersion ?? buildMetadata?.appVersion ?? ZCODE_VERSION),
     buildCommitId: normalizeValue(buildMetadata?.buildCommitId ?? ZCODE_COMMIT),
     buildTime: normalizeValue(buildMetadata?.buildTime ?? ZCODE_BUILD_TIME),
+    upstreamBase: normalizeValue(buildMetadata?.upstreamBase), // mae: #11
+    upstreamBaseCommit: normalizeValue(buildMetadata?.upstreamBaseCommit), // mae: #11
     environment: normalizeValue(options.environment ?? ZCODE_ENV),
     electronVersion: normalizeValue(runtimeVersions.electron),
     electronBuilderVersion: resolveElectronBuilderVersion(buildMetadata),
@@ -177,6 +188,7 @@ export function formatAboutDetail(snapshot: AboutSnapshot): string {
     `Version: ${snapshot.appVersion}`,
     `Commit: ${snapshot.buildCommitId}`,
     `Build Time: ${snapshot.buildTime}`,
+    `Upstream Base: ${snapshot.upstreamBase}`, // mae: #11 上游基线随日志导出可追溯
     `Environment: ${snapshot.environment}`,
     "",
     `Electron: ${snapshot.electronVersion}`,
@@ -280,6 +292,7 @@ export async function showAboutDialog(
         appVersion: snapshot.appVersion,
         copyright: formatAboutCopyright(undefined, locale),
         optimizationLine: formatAboutOptimizationLine(snapshot, locale),
+        upstreamBaseLine: formatUpstreamBaseLine(snapshot.upstreamBase, locale), // mae: #11
         versionLabel: aboutMessages.versionLabel,
         okButtonLabel: aboutMessages.okButtonLabel,
       }),

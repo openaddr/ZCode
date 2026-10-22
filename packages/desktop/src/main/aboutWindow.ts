@@ -3,6 +3,7 @@ interface CustomAboutDialogHtmlInput {
   appVersion: string;
   copyright: string;
   optimizationLine: string;
+  upstreamBaseLine?: string; // mae: #11 上游基线行,空串/缺省不渲染
   versionLabel: string;
   okButtonLabel: string;
 }
@@ -197,6 +198,8 @@ export function createCustomAboutDialogHtml(input: CustomAboutDialogHtmlInput): 
           </h1>
           <div class="meta">
             ${input.optimizationLine ? `<div>${escapeHtml(input.optimizationLine)}</div>` : ""}
+            ${input.upstreamBaseLine ? `<div>${escapeHtml(input.upstreamBaseLine)}</div>` : ""}
+            <!-- mae: #11 上游基线行 -->
             <div>${escapeHtml(input.copyright)}</div>
           </div>
         </div>

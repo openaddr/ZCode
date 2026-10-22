@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+// mae: 上游基线元数据(upstreamBase/upstreamBaseCommit)——specs/mae/versioning-branding.md #11
+import { resolveUpstreamBase } from "./mae-upstream-base.mjs";
 
 const require = createRequire(import.meta.url);
 const moduleDir = import.meta.dirname;
@@ -90,6 +92,8 @@ export function collectBuildMetadata() {
     ),
     buildCommitId: resolveCommitId(),
     buildTime: new Date().toISOString(),
+    // mae: 上游基线(版本+commit)进 build-meta,关于页展示双信息(#11)
+    ...resolveUpstreamBase(process.env, workspaceDir),
     electronBuilderVersion: resolveInstalledPackageVersion(
       "electron-builder",
       desktopPackageJson.devDependencies?.["electron-builder"],
@@ -141,6 +145,7 @@ if (entryFilePath === currentFilePath) {
   const metadata = writeBuildMetadata();
   process.stdout.write(`[build-meta] wrote ${metadataPath}\n`);
   process.stdout.write(
-    `[build-meta] commit=${metadata.buildCommitId} time=${metadata.buildTime}\n`,
+    `[build-meta] commit=${metadata.buildCommitId} time=${metadata.buildTime}\n` +
+      `[build-meta] upstreamBase=${metadata.upstreamBase} (${metadata.upstreamBaseCommit})\n`, // mae: #11
   );
 }
