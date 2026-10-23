@@ -166,12 +166,22 @@ export async function collectScriptWorkflowSessionStats(
   return stats;
 }
 
+/**
+ * user script workflow 根(.zcode/workflows 的收集根)。
+ *
+ * mae: 存储根环境变量优先(#24 同轴)——mae 桌面 host 注入 ZCODE_STORAGE_DIR(mae 数据根)
+ * 后 user 根随 CLI 存储轴落 mae 树;未注入(官方 CLI/官方桌面)保持上游 ~/.zcode 语义(#31)。
+ */
+export function userScriptWorkflowsRoot(): string {
+  return process.env.ZCODE_STORAGE_DIR?.trim() || join(homedir(), ".zcode");
+}
+
 export function inferScriptWorkflowScope(
   scriptPath: string,
   workingDirectory: string,
 ): "explicit" | "project" | "user" {
   if (isWithin(scriptPath, join(workingDirectory, ".zcode", "workflows"))) return "project";
-  if (isWithin(scriptPath, join(homedir(), ".zcode", "workflows"))) return "user";
+  if (isWithin(scriptPath, join(userScriptWorkflowsRoot(), "workflows"))) return "user";
   return "explicit";
 }
 

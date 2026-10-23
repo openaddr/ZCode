@@ -131,6 +131,16 @@ describe("host 存储根注入(buildHostProcessEnv)", () => {
     );
   });
 
+  it("mae 身份:注入 ZCODE_MAILBOX_ROOT=mae 数据根下 mailbox,会话邮箱不落官方 ~/.zcode(#31)", async () => {
+    const { buildHostProcessEnv } = await import("../src/main/desktopRuntimeEnv.js");
+
+    const env = buildHostProcessEnv({});
+
+    expect(env.ZCODE_MAILBOX_ROOT?.replaceAll("\\", "/")).toBe(
+      "/Users/mae-tester/.zcode-mae/.zcode/mailbox",
+    );
+  });
+
   it("mae 身份:注入值优先于继承环境里的用户自定义 ZCODE_STORAGE_DIR(mae 数据根是权威)", async () => {
     const { buildHostProcessEnv } = await import("../src/main/desktopRuntimeEnv.js");
 
@@ -146,6 +156,7 @@ describe("host 存储根注入(buildHostProcessEnv)", () => {
     const env = buildHostProcessEnv({});
 
     expect(env.ZCODE_STORAGE_DIR).toBeUndefined();
+    expect(env.ZCODE_MAILBOX_ROOT).toBeUndefined();
   });
 });
 

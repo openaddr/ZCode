@@ -126,7 +126,7 @@ export async function prepareModelTelemetryEnv(
   }
   const existingInstallationId = normalizeTelemetryDeviceMid(env.ZCODE_TELEMETRY_DEVICE_MID);
   const installationId =
-    existingInstallationId ?? (await resolveStandaloneDeviceMid(env.ZCODE_HOME?.trim()));
+    existingInstallationId ?? (await resolveStandaloneDeviceMid(resolveStandaloneStateRoot(env)));
   const preparedEnv = installationId ? { ...env, ZCODE_TELEMETRY_DEVICE_MID: installationId } : env;
 
   if (!preparingOwner && !preparedOwner) {
@@ -220,11 +220,22 @@ function normalizeTelemetryId(value: string | undefined): string | undefined {
   return normalized && TELEMETRY_ID_PATTERN.test(normalized) ? normalized : undefined;
 }
 
+/**
+ * standalone 设备态的 `.zcode` 收集根。
+ *
+ * mae: ZCODE_STORAGE_DIR 优先(#24 同轴)——mae 桌面 host 注入(mae 数据根 ~/.zcode-mae/.zcode)
+ * 后设备态随 CLI 存储轴落 mae 树;未注入(官方 CLI/官方桌面)回退真实 HOME 的 ~/.zcode;
+ * ZCODE_HOME 为上游显式覆盖轴,优先级最高(#31)。
+ */
+function resolveStandaloneStateRoot(env: EnvRecord): string | undefined {
+  return env.ZCODE_HOME?.trim() || env.ZCODE_STORAGE_DIR?.trim() || undefined;
+}
+
 async function resolveStandaloneDeviceMid(
-  zcodeHome: string | undefined,
+  stateRoot: string | undefined,
 ): Promise<string | undefined> {
-  const stateFile = zcodeHome
-    ? join(zcodeHome, "v2", "telemetry-state.json")
+  const stateFile = stateRoot
+    ? join(stateRoot, "v2", "telemetry-state.json")
     : join(homedir(), ".zcode", "v2", "telemetry-state.json");
   const pending = pendingStandaloneDeviceMidByStateFile.get(stateFile);
   if (pending) return pending;

@@ -12,6 +12,8 @@ import {
   workspaceHookTrustRecordSchema,
   workspaceHookTrustStoreFileSchema,
 } from "@zcode/contracts";
+// mae: 用户级 home 解析委托统一 resolver——CLI 执行侧 trust store 与 services 侧(#25)同链(#31)
+import { resolveMaeAwareUserHomeDir } from "@zcode/shared/mae";
 
 const DEFAULT_LOCK_TIMEOUT_MS = 5_000;
 const DEFAULT_STALE_LOCK_MS = 30_000;
@@ -130,7 +132,10 @@ export interface WorkspaceHookTrustStorePathOptions {
 export async function resolveWorkspaceHookTrustStorePath(
   options: WorkspaceHookTrustStorePathOptions = {},
 ): Promise<string> {
-  const home = resolve(options.homeDir ?? homedir());
+  // mae: home 兜底与 services 侧 hooksService 同链(ZCODE_DESKTOP_HOME_DIR 优先,显式 homeDir
+  // 参数仍最优先)——mae 桌面 host 注入后 trust store 落 mae 数据根 ~/.zcode-mae/.zcode/security,
+  // 官方 ~/.zcode/security 零写入;未注入(官方 CLI/官方桌面)保持上游 homedir() 语义(#31)
+  const home = resolve(options.homeDir ?? resolveMaeAwareUserHomeDir() ?? homedir());
   const userConfigPath = resolve(
     options.userConfigPath ?? join(home, ".zcode", "cli", "config.json"),
   );
