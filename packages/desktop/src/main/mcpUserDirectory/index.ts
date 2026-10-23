@@ -16,6 +16,8 @@ import type {
   SaveCliMcpToUserDirectoryRequest,
 } from "@zcode/shared";
 import type { McpConfigKeyName } from "./types.js";
+// mae: 用户级 home 解析委托统一 resolver(#25/#31)
+import { resolveMaeAwareUserHomeDir } from "@zcode/shared/mae";
 import { isRecord, readJsonObject, writeTextAtomic } from "./utils.js";
 import { migrateLegacyCommonMcp } from "./legacy.js";
 
@@ -60,8 +62,10 @@ const AGENTS_MCP_DESCRIPTOR: DirectoryMcpDescriptor = {
 };
 
 function resolveUserHomeDir(): string {
-  const envHome = process.env.HOME?.trim() || process.env.USERPROFILE?.trim();
-  return envHome && envHome.length > 0 ? envHome : homedir();
+  // mae: 用户级 home 与 settingService/hooksService/mcpSyncService 同链(ZCODE_DESKTOP_HOME_DIR
+  // 优先,#25 resolver)——mae 身份下用户级 MCP 配置(`.zcode/cli/config.json` 与 `.agents/mcp.json`)
+  // 落 mae 数据根,与 services 侧两源同根;未注入(官方身份)保持真实 HOME 上游语义(#31)
+  return resolveMaeAwareUserHomeDir() ?? homedir();
 }
 
 const DIRECTORY_MCP_DESCRIPTORS: readonly DirectoryMcpDescriptor[] = [

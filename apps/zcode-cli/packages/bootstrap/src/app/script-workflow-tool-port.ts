@@ -1,4 +1,3 @@
-import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   WORKFLOW_RUN_ID_PATTERN,
@@ -19,7 +18,7 @@ import {
 } from "@zcode/contracts";
 import { readWorkflowScriptDocument } from "./script-workflow-meta.js";
 import type { ScriptWorkflowRuntime } from "./script-workflow-runtime.js";
-import { isScriptWorkflowStore } from "./script-workflow-utils.js";
+import { isScriptWorkflowStore, userScriptWorkflowsRoot } from "./script-workflow-utils.js"; // mae: user 根解析共用存储轴(#31)
 
 const WORKFLOW_SCRIPT_SUFFIX = ".workflow.js";
 const WORKFLOW_NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
@@ -315,7 +314,9 @@ async function resolveNamedWorkflowPath(
   const fileName = workflowFileName(name);
   const candidates = [
     join(deps.workingDirectory, ".zcode", "workflows", fileName),
-    join(homedir(), ".zcode", "workflows", fileName),
+    // mae: user 根与分类(inferScriptWorkflowScope)共用存储轴解析(#31)——注入
+    // ZCODE_STORAGE_DIR 时按名解析落 mae 树,未注入保持 ~/.zcode/workflows
+    join(userScriptWorkflowsRoot(), "workflows", fileName),
   ];
   const builtIn = BUILTIN_WORKFLOW_ALLOWLIST.get(name);
   if (builtIn) candidates.push(builtIn);

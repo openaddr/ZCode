@@ -18,11 +18,14 @@
 //
 // 范围外(有意,见 specs/mae D3 有意共享清单):.claude / .claude.json 跨工具导入(Claude 命名空间,
 // 非本产品命名空间);项目级 .zcode(workspace 参数);.zcode-plugin/.zcode-beta/.zcode-mae 等异名字面量。
-// 已知局限:动态段展开(join(base, ...segments))与 shell 字符串 "$HOME/.zcode" 不在本扫描器模式内。
+// 已知局限:动态段展开(join(base, ...segments))与 shell 字符串 "$HOME/.zcode" 不在本扫描器模式内
+// (#31 边界核实:动态段代表 mcpUserDirectory 已挂 ZCODE_DESKTOP_HOME_DIR 收口;shell 串全部为远程主机轴
+// ($HOME/.zcode/server,在远端 HOME 解析)或官方身份工具脚本(doctor/installer),无本机 mae 实体)。
 //
 // 白名单(WHITELIST)与 specs/mae 豁免清单同源,四组:
 //   intentional-share 有意共享 / hooked-elsewhere 官方默认轴已由 env/身份注入收口 /
-//   remote-host-path 远程主机轴(在其 HOME 解析,不落本机)/ known-leftover 漏网登记(ratchet)。
+//   remote-host-path 远程主机轴(在其 HOME 解析,不落本机)/ known-leftover 漏网登记(ratchet;
+//   #31 收口后清空,自测断言空组,新漏网须显式登记)。
 // 命中白名单外 → 非零退出,列出 文件:行:片段。
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -73,7 +76,7 @@ const WINDOW_AFTER_MULTILINE = 2;
  * 白名单:与 specs/mae/identity-isolation.md D3 有意共享清单同源。
  * intentional-share = 有意共享;hooked-elsewhere = 官方默认轴,mae 侧由 env/身份注入收口;
  * remote-host-path = 远程主机轴(~/ 在远程主机 HOME 解析,不落本机 ~/.zcode);
- * known-leftover = 漏网登记(修复后删除条目,ratchet 收紧)。
+ * known-leftover = 漏网登记(修复后删除条目,ratchet 收紧;#31 七项收口后保持清空,自测断言空组)。
  */
 export const WHITELIST_GROUPS = [
   "intentional-share",
@@ -160,54 +163,6 @@ export const DEFAULT_WHITELIST = [
     group: "remote-host-path",
     pattern: /^packages\/server\/src\/source-server\/transportAdapter\.ts$/u,
     reason: "source-server 远程读路径 ~/.zcode/server,远程主机 HOME 轴",
-  },
-  {
-    id: "mae-leftover-script-workflow-scope",
-    group: "known-leftover",
-    pattern: /^apps\/zcode-cli\/packages\/bootstrap\/src\/app\/script-workflow-utils\.ts$/u,
-    reason: "user workflow scope 分类根仍指官方树,mae 保存的按名分类失准(#24 漏网,#23 后续)",
-  },
-  {
-    id: "mae-leftover-script-workflow-named",
-    group: "known-leftover",
-    pattern: /^apps\/zcode-cli\/packages\/bootstrap\/src\/app\/script-workflow-tool-port\.ts$/u,
-    reason: "按名解析 user workflow 的候选根仍指官方树(#24 漏网,#23 后续)",
-  },
-  {
-    id: "mae-leftover-hook-trust-store",
-    group: "known-leftover",
-    pattern: /^apps\/zcode-cli\/packages\/adapters\/src\/storage\/workspace-hook-trust-store\.ts$/u,
-    reason: "CLI 执行侧 trust store 写真实 ~/.zcode/security(#25 只收口 services 侧,#23 后续)",
-  },
-  {
-    id: "mae-leftover-chromium-early-settings",
-    group: "known-leftover",
-    pattern: /^packages\/desktop\/src\/main\/desktopChromiumHardwareAccelerationBootstrap\.ts$/u,
-    reason: "早期启动读官方 setting.json 的 HW accel 布尔,只读单值(#24 漏网,#23 后续)",
-  },
-  {
-    id: "mae-leftover-standalone-telemetry-state",
-    group: "known-leftover",
-    pattern: /^apps\/zcode-cli\/packages\/telemetry\/src\/bootstrap\.ts$/u,
-    reason: "standalone 设备态默认官方树;ZCODE_HOME 未注入(读,#23 后续核实)",
-  },
-  {
-    id: "mae-leftover-services-telemetry-state",
-    group: "known-leftover",
-    pattern: /^packages\/services\/src\/telemetry\/telemetryCore\.ts$/u,
-    reason: "services 侧设备态 homeDir 轴未挂 mae resolver,默认随真实 HOME(#23 后续核实)",
-  },
-  {
-    id: "mae-leftover-plugin-config-file-default",
-    group: "known-leftover",
-    pattern: /^apps\/zcode-cli\/packages\/adapters\/src\/config\/file-config\.adapter\.ts$/u,
-    reason: "插件配置文件默认基目录 ~/.zcode/cli(mae embed 读写官方 config.json,#23 后续)",
-  },
-  {
-    id: "mae-leftover-mailbox-default",
-    group: "known-leftover",
-    pattern: /^apps\/zcode-cli\/packages\/bootstrap\/src\/app\/create-app\.ts$/u,
-    reason: "ZCODE_MAILBOX_ROOT 默认 ~/ 值,mae 未注入该轴(#23 后续)",
   },
 ];
 

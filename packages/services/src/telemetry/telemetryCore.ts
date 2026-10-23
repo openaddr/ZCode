@@ -16,7 +16,8 @@ import { createHash } from "node:crypto";
 import { version } from "node:os";
 import { dirname, join } from "node:path";
 import { createServiceLogger } from "#src/logger/serviceLogger.js";
-import { getAppConfigDir } from "../paths.js";
+// mae: 设备态基目录改走 getDataBaseDir(数据基目录轴,显式 homeDir 优先)(#31)
+import { getDataBaseDir } from "../paths.js";
 
 const REPORT_ENDPOINT = ZCODE_TELEMETRY_REPORT_ENDPOINT;
 
@@ -123,18 +124,23 @@ function toLocalDateKey(timestamp: number, timeZone: string): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * 设备态文件的基目录:显式 homeDir(测试/远端 server 注入,override-first)或数据基目录轴。
+ *
+ * mae: 默认走 getDataBaseDir(setDataBaseDir > ZCODE_DATA_BASE_DIR > HOME)——mae 桌面 main
+ * 启动早期 setDataBaseDir(~/.zcode-mae)后,设备态落 ~/.zcode-mae/.zcode/v2/,不写官方
+ * ~/.zcode(#31;specs/mae D3 telemetry-state 行)。
+ */
+function resolveTelemetryStateBaseDir(homeDir?: string): string {
+  return homeDir ?? getDataBaseDir();
+}
+
 function resolveTelemetryStateFile(homeDir?: string): string {
-  if (homeDir) {
-    return join(homeDir, ".zcode", "v2", "telemetry-state.json");
-  }
-  return join(getAppConfigDir(), "telemetry-state.json");
+  return join(resolveTelemetryStateBaseDir(homeDir), ".zcode", "v2", "telemetry-state.json");
 }
 
 function resolveTelemetryLockFile(homeDir?: string): string {
-  if (homeDir) {
-    return join(homeDir, ".zcode", "v2", "telemetry-state.lock");
-  }
-  return join(getAppConfigDir(), "telemetry-state.lock");
+  return join(resolveTelemetryStateBaseDir(homeDir), ".zcode", "v2", "telemetry-state.lock");
 }
 
 function isFreshDailyActiveInFlight(
