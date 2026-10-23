@@ -27,6 +27,8 @@ vi.mock("@zcode/shared", async (importOriginal) => {
 vi.mock("@zcode/services/node", () => ({
   getAppConfigDir: vi.fn(() => "/mock/config"),
   getDataBaseDir: vi.fn(() => "/mock/db"),
+  // mae: buildHostProcessEnv 的存储根注入(#24)读取该导出,补进 mock 保持本文件聚焦运行名链
+  getZCodeDataRootDir: vi.fn(() => "/mock/db/.zcode"),
   ZCODE_CUA_BUNDLED_HELPER_APP_PATH_ENV: "ZCODE_CUA_BUNDLED_HELPER_APP_PATH",
   ZCODE_WINDOWS_APP_INSTALL_DIR_ENV: "ZCODE_WINDOWS_APP_INSTALL_DIR",
 }));

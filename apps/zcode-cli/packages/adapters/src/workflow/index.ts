@@ -32,7 +32,13 @@ interface WorkflowIndexFile {
   runs: WorkflowRunListItem[];
 }
 
-const DEFAULT_WORKFLOW_ROOT = join(homedir(), ".zcode", "cli", "workflows");
+// mae: 存储根环境变量优先——mae 桌面 host 注入 ZCODE_STORAGE_DIR(mae 数据根),默认根随 CLI
+// 存储轴落 mae 树(#24);未注入(官方 CLI/官方桌面)保持上游 ~/.zcode 语义
+const DEFAULT_WORKFLOW_ROOT = join(
+  process.env.ZCODE_STORAGE_DIR?.trim() || join(homedir(), ".zcode"),
+  "cli",
+  "workflows",
+);
 const WORKFLOW_DEFINITION_FILE_EXTENSION = ".json";
 
 export class NodeWorkflowStore implements WorkflowStorePort {
