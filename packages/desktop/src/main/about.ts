@@ -17,6 +17,8 @@ import {
 import { createCustomAboutDialogHtml } from "./aboutWindow.js";
 // mae: 关于页上游基线行(#11)——文案与留空策略在 mae 模块,此处薄挂接
 import { formatUpstreamBaseLine } from "./mae/aboutUpstreamBase.js";
+// mae: dev 态品牌图标路由(#12)
+import { MAE_BRAND_ASSET_SUBDIR } from "./mae/brandAssets.js";
 
 interface DesktopBuildMetadata {
   appVersion?: string;
@@ -242,9 +244,10 @@ export function createSystemAboutPanelOptions(
 }
 
 function resolveAboutIconPath(isPackaged: boolean): string {
+  // mae: dev 态关于弹窗图标随品牌目录路由(build/mae)(#12)
   return isPackaged
     ? join(process.resourcesPath, "icon.png")
-    : join(import.meta.dirname, "../../build/icon.png");
+    : join(import.meta.dirname, `../../build/${MAE_BRAND_ASSET_SUBDIR}icon.png`);
 }
 
 export async function showAboutDialog(

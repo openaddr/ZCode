@@ -15,6 +15,8 @@ import {
   type CuaPermissionDragPanel,
 } from "./cuaPermissionDragPanel.js";
 import { createSystemSettingsWindowWatcher } from "./cuaSystemSettingsWindowWatcher.js";
+// mae: dev 态 CUA 拖拽图标随品牌目录路由(#12)
+import { MAE_BRAND_ASSET_SUBDIR } from "./mae/brandAssets.js";
 
 const execFileAsync = promisify(execFile);
 const MACOS_SYSTEM_SETTINGS_BUNDLE_ID = "com.apple.systempreferences";
@@ -38,7 +40,7 @@ function resolveZCodeIcon(): Electron.NativeImage {
   if (cachedZCodeIcon && !cachedZCodeIcon.isEmpty()) return cachedZCodeIcon;
   const iconPath = app.isPackaged
     ? join(process.resourcesPath, "icon.png")
-    : join(import.meta.dirname, "..", "..", "build", "icon.png");
+    : join(import.meta.dirname, "..", "..", "build", `${MAE_BRAND_ASSET_SUBDIR}icon.png`);
   const image = nativeImage.createFromPath(iconPath);
   cachedZCodeIcon = image.isEmpty()
     ? nativeImage.createFromDataURL(CUA_HELPER_DRAG_ICON_DATA_URL)

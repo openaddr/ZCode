@@ -9,6 +9,11 @@ description: 修改 ZCode 会话管理（左侧任务列表、tasks-index.sqlite
 
 权威 spec：`docs/superpowers/specs/2026-09-09-virtual-project-design.md` 与 `docs/ui/task-grouped-view.md`。2026-10-13 分组恢复裁决覆盖历史 Group 合并 Project 方案。本 skill 不重复 spec，只讲「为什么」和「怎么不踩坑」。
 
+> **mae 状态标注（fork 定制，读本文前必看）**：本文描述上游数据模型与流程，以下内容在 mae 分支（specs/mae/，D3/D7）语义有变——
+> ① 用户级 `~/.zcode` 路径全部平移到 `~/.zcode-mae/.zcode`（数据根隔离，全景表见 specs/mae/identity-isolation.md「D3 定稿」；例外:日志/轨迹/命令等项目级与有意共享清单）；
+> ② 登录/套餐/分享/闲时/远控/Bots/远程工作区入口已随 feature gates 隐藏（packages/ui/src/mae/featureGates.ts），相关流程描述仅作上游语义参考，mae 下不可达；
+> ③ 涉及测试断言时以 mae 语义为准（单测已按 gates 适配，显式 `ZCODE_ALLOW_OFFICIAL_IDENTITY=1` 才回到官方语义）。
+
 ## 1. 一句话原则
 
 **会话事实归 CLI，组织态归 Host；每个字段只有一个写者。**

@@ -55,6 +55,9 @@ const desktopProductIdentity = resolveDesktopProductIdentity({
   ...process.env,
   ZCODE_ENV: builtinProviderConfig.environment,
 });
+// mae: 品牌图标目录随身份——mae 用 build/mae 青色调资产(#12),官方保留 build/ 原资产;
+// 运行期 dev 态同一路由见 src/main/mae/brandAssets.ts,打包态资源名(to)不变故 resourcesPath 消费方零改动
+const brandAssetDir = desktopProductIdentity.flavor === "mae" ? "build/mae" : "build";
 const nativeSearchReleasePlan = resolveNativeSearchReleasePlan({
   platform: targetPlatform.os,
   arch: targetPlatform.arch,
@@ -782,21 +785,22 @@ export default {
     },
     {
       // 应用图标：打包后放入 resources 目录，主进程通过 process.resourcesPath 加载
-      from: "build/icon.png",
+      // mae: from 随品牌目录路由(#12)
+      from: `${brandAssetDir}/icon.png`,
       to: "icon.png",
     },
     ...(targetPlatform.os === "linux"
       ? [
           {
             // AppImage 用户级 hicolor 图标安装使用真实 512x512 资源，避免目录标称尺寸和 PNG IHDR 不一致。
-            from: "build/icons/512x512.png",
+            from: `${brandAssetDir}/icons/512x512.png`,
             to: "icon_512x512.png",
           },
         ]
       : []),
     {
       // Windows 独立图标：开发态和打包态都统一走同一套任务栏/窗口图标资源。
-      from: "build/icon_windows.png",
+      from: `${brandAssetDir}/icon_windows.png`,
       to: "icon_windows.png",
     },
     ...(targetPlatform.os === "win32"
@@ -804,7 +808,7 @@ export default {
           {
             // Windows 托盘图标：Tray 在打包态只能稳定读取 resources 下的独立资源。
             // 这里不复用窗口 PNG，避免通知区域在高 DPI 下退化成模糊缩放图。
-            from: "build/icon.ico",
+            from: `${brandAssetDir}/icon.ico`,
             to: "tray_icon.ico",
           },
         ]
@@ -872,6 +876,8 @@ export default {
     // macOS 语言包是 en.lproj / zh_CN.lproj，沿用顶层 "en-US" 会一个都匹配不上被全部删掉，
     // Chromium 自带文案随之丢失（视频控件菜单只剩图标、播放速度子菜单空白）。
     electronLanguages: ["en", "zh_CN"],
+    // mae: .app 图标随品牌目录路由(#12;官方路径与 electron-builder 默认值等价)
+    icon: `${brandAssetDir}/icon.icns`,
     extendInfo: {
       NSAppleEventsUsageDescription: `${desktopProductIdentity.productName} needs Apple Events access to coordinate local automation workflows with user-approved desktop apps.`,
       // 缺失该 key 时 macOS 会静默拒绝 CoreBluetooth 枚举，内置浏览器 Web Bluetooth
@@ -909,6 +915,8 @@ export default {
     target: ["nsis"],
     artifactName: buildDesktopArtifactName("win"),
     verifyUpdateCodeSignature: true,
+    // mae: exe 内嵌图标随品牌目录路由(#12;官方路径与 electron-builder 默认值等价)
+    icon: `${brandAssetDir}/icon.ico`,
     signExts: [".node", ".dll"],
     // Bugfix: Windows CI 之前完全依赖 electron-builder 内置 signtool.exe，
     // 一旦 runner 的证书链路要求改走 vsigntool，打包阶段就会在内置签名环节卡死。
@@ -925,6 +933,8 @@ export default {
   linux: {
     target: ["AppImage", "deb", "rpm", "pacman"],
     artifactName: buildDesktopArtifactName("linux"),
+    // mae: hicolor 图标目录随品牌目录路由(#12;官方路径与 electron-builder 默认值等价)
+    icon: `${brandAssetDir}/icons`,
     // desktop 包名是 scoped package（@zcode/desktop），electron-builder 默认会把
     // Linux executable/Icon 推成 @zcodedesktop。部分桌面环境无法按这个 icon name 命中
     // hicolor 图标，最终回退成系统齿轮。这里固定成稳定的小写名称，让 Icon=zcode
@@ -964,9 +974,10 @@ export default {
     // 显式放大 DMG 容量，避免拷贝截断导致的“Framework 目录存在但核心文件缺失”。
     size: "3200m",
     // 使用自定义安装背景图。
-    background: "build/dmg_background.png",
+    // mae: 背景图/安装盘图标随品牌目录路由(#12)
+    background: `${brandAssetDir}/dmg_background.png`,
     // 安装盘图标统一使用安装专用素材，避免复用应用图标导致安装识别度不足。
-    icon: "build/icon_installer.icns",
+    icon: `${brandAssetDir}/icon_installer.icns`,
     contents: [
       // dmg-builder@1.2.5 的 dmgbuild 会对每个 type:"file" 条目执行 ditto <path>，
       // path 被当作真实源文件解析。.background.tiff / .VolumeIcon.icns 是 dmgbuild
@@ -981,9 +992,10 @@ export default {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
     // Windows 安装流程使用独立安装图标，和应用运行时图标解耦。
-    installerIcon: "build/icon_installer.ico",
-    uninstallerIcon: "build/icon_installer.ico",
-    installerHeaderIcon: "build/icon_installer.ico",
+    // mae: 安装/卸载/头图标随品牌目录路由(#12)
+    installerIcon: `${brandAssetDir}/icon_installer.ico`,
+    uninstallerIcon: `${brandAssetDir}/icon_installer.ico`,
+    installerHeaderIcon: `${brandAssetDir}/icon_installer.ico`,
   },
   detectUpdateChannel: false,
   publish: {

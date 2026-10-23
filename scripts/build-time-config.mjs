@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { tsImport } from "tsx/esm/api";
 
 /**
  * 桌面构建期可选能力的唯一解析入口：ARMS RUM 上报、事件上报、自动更新。
@@ -48,11 +47,11 @@ export async function resolveBuildTimeConfig(
     ),
   };
   // mae: 外联静默——遥测端点置空(框架保留,空端点=ARMS/事件上报关闭);官方身份显式授权时保留(#7)
-  const { isMaeExternalSilenceEnabled } = await tsImport(
+  // mae: #12 本体迁 .mjs 后直引纯 JS,免去 tsx tsImport 中转(原生 import 无第二参)
+  const { isMaeExternalSilenceEnabled } = await import(
     pathToFileURL(
-      resolve(import.meta.dirname, "../packages/shared/src/mae/externalSilence.ts"),
+      resolve(import.meta.dirname, "../packages/shared/src/mae/externalSilence.mjs"),
     ).href,
-    import.meta.url,
   );
   if (!isMaeExternalSilenceEnabled(env)) return config;
   return { ...config, armsRumEndpoint: "", telemetryReportEndpoint: "" };

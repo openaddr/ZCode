@@ -6,11 +6,13 @@ import {
   type LinuxDesktopCommandRunner,
   type LinuxDeepLinkRegistrationLogger,
 } from "./desktopLinuxXdg.js";
+// mae: hicolor 图标名随身份——mae 安装 zcode-mae.png,与官方 zcode.png 解耦(#12 收口 #10 登记遗留)
+import { ZCODE_PRODUCT_FLAVOR } from "@zcode/shared";
 
 // 从 desktopLinuxDeepLinkRegistration 拆出的 AppImage 用户级图标安装逻辑：
 // 图标集成是可选的桌面增强，与 deep link 协议注册分属不同关注点，独立成模块便于各自演进。
 
-const LINUX_APP_ICON_NAME = "zcode";
+const LINUX_APP_ICON_NAME = ZCODE_PRODUCT_FLAVOR === "mae" ? "zcode-mae" : "zcode";
 const LINUX_APP_ICON_SIZE = "512x512";
 
 function resolveLinuxUserIconFilePath(dataDir: string): string {

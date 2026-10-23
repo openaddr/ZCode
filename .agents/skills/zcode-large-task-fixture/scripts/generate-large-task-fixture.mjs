@@ -5,9 +5,19 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { spawnSync } from "node:child_process";
+// mae: 数据根随身份解析(#12 引用清理)——此前硬编码 ~/.zcode,mae 下会把测试夹具
+// 写进官方数据树(D3 零交集红线);解析链与桌面运行时同源,详见 SKILL.md「数据根」
+import { resolveDesktopProductIdentity } from "../../../../packages/desktop/scripts/desktop-product-identity.mjs";
+import { resolveMaeDataRootBootstrap } from "../../../../packages/desktop/scripts/mae-identity.mjs";
 
 const args = parseArgs(process.argv.slice(2));
-const zcodeRoot = join(homedir(), ".zcode");
+const productFlavor = resolveDesktopProductIdentity(process.env).flavor;
+// bootstrap 返回数据基目录(~/.zcode-mae),业务根在其下 .zcode——与 services paths.ts 同构
+const maeDataBaseDir = resolveMaeDataRootBootstrap(productFlavor, process.env);
+const zcodeRoot =
+  args.root ??
+  process.env.ZCODE_STORAGE_DIR?.trim() ??
+  (maeDataBaseDir ? join(maeDataBaseDir, ".zcode") : join(homedir(), ".zcode"));
 const cliDbPath = join(zcodeRoot, "cli", "db", "db.sqlite");
 const taskIndexPath = join(zcodeRoot, "v2", "tasks-index.sqlite");
 
@@ -50,6 +60,8 @@ function parseArgs(argv) {
     else if (arg === "--title") out.title = argv[++i];
     else if (arg === "--verify") out.verify = argv[++i];
     else if (arg === "--delete") out.delete = argv[++i];
+    // mae: --root 显式指定数据根(官方身份/自定义位置时用;默认链见顶部 zcodeRoot)
+    else if (arg === "--root") out.root = argv[++i];
     else if (arg === "--no-backup") out.backup = false;
     else throw new Error(`Unknown argument: ${arg}`);
   }
