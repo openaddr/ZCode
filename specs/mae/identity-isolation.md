@@ -38,6 +38,45 @@
 
 > 落地记录(2026-10-22,#24 运行态写入重定位):四处薄挂接——(1)`buildHostProcessEnv` 为 mae 身份注入 `ZCODE_STORAGE_DIR=mae 数据根`(`~/.zcode-mae/.zcode`),Agent 侧 exec 输出(`adapters/src/exec/execution-utils.ts`)、剪贴板(`cli/src/clipboard-image.ts`)、SEA 运行时工具(`cli/src/sea-runtime-tools.ts`)三处本就读该变量,插件存储与技能(`bootstrap/src/plugins.ts`、`skills.ts` 经 `config.storage.dir`)同轴白拿;注入值优先于继承 env(mae 数据根是权威)。(2)CLI `adapters/src/workflow/index.ts` 的 `DEFAULT_WORKFLOW_ROOT` 改为 `ZCODE_STORAGE_DIR` 优先(未注入保持官方 `~/.zcode/cli/workflows`)。(3)`exportLogs.ts` 的 cli 目录与 computer-use run 目录经共享 `getZCodeHomeRootDir()` 随 mae 数据根收集,诊断导出不再打包官方副本。(4)`index.ts` 的 `settingsFile` 改走 `resolveBootstrapSettingsFile()`(mae 窗口状态落 mae 根)。核实结论:CLI sqlite(`~/.zcode/cli/db/db.sqlite`)**被内嵌 agent 使用**——`app-server` 经 zcode-protocol 入口每次启动都 open SqliteSessionStore(路径走 `config.storage.sessionDbPath`,默认 `~/` 前缀由 `resolvePath` 按真实 homedir 解析,`ZCODE_STORAGE_DIR` 不影响它;env 覆盖轴为 `ZCODE_SESSION_DB_PATH`),**不可按"不用"豁免**,其收口(注入 ZCODE_SESSION_DB_PATH 或 config 改造)留待 #23 收口票定夺;插件存储归属 CLI 存储轴(`{storage.dir}/cli/plugins`),随本票 ZCODE_STORAGE_DIR 注入隔离成立,desktop/services 侧无独立插件路径解析。防丢网:`packages/desktop/test/mae-runtime-reloc.test.ts`(6 例)+ `apps/zcode-cli/packages/adapters/tests/workflow-root-mae-reloc.test.ts`(3 例)。
 
+## D3 定稿:用户级存储隔离全景与豁免清单(2026-10-22,#23/#26)
+
+**口径**:mae 身份(默认)下,本机用户级数据、运行态与配置存储完全隔离于 `~/.zcode-mae/.zcode`;官方 `~/.zcode` 除下表「有意共享」外零写入、零读取依赖。官方身份(`ZCODE_ALLOW_OFFICIAL_IDENTITY=1`)保留上游全部语义。隔离轴五条:`setDataBaseDir(~/.zcode-mae)`(启动早期,优先级高于 env)、`ZCODE_DESKTOP_HOME_DIR`(setting.json 与用户级 hooks/MCP 基目录)、`ZCODE_STORAGE_DIR`(Agent 侧 exec/剪贴板/SEA/工作流/插件/技能)、`ZCODE_SESSION_DB_PATH`(会话 DB)、`ZCODE_DATA_BASE_DIR`(host 透传共享凭证等)。
+
+### 目录级全景表
+
+| 目录/内容 | mae 归属 | 轴/依据 |
+| --- | --- | --- |
+| `~/.zcode-mae/.zcode`(业务数据根) | mae 独占 | `setDataBaseDir` 启动挂接(#9) |
+| `~/.zcode-mae/.zcode/v2/setting.json`(主进程+host) | mae | `ZCODE_DESKTOP_HOME_DIR`(#9/#24) |
+| `~/.zcode-mae/.zcode/cli/config.json`(用户级 hooks/MCP)、`.zcode/security`(services 侧 trust store) | mae | `resolveMaeAwareUserHomeDir`(#25) |
+| `~/.zcode-mae/.zcode/cli/workflows`(动态工作流) | mae | `ZCODE_STORAGE_DIR` 优先(#24) |
+| `~/.zcode-mae/.zcode/cli/db/db.sqlite`(会话 DB) | mae | `ZCODE_SESSION_DB_PATH` 注入(#24 补遗) |
+| exec 输出/剪贴板/SEA 运行时工具/插件存储/技能存储 | mae | `ZCODE_STORAGE_DIR`(#24) |
+| computer-use helper(dev 兜底)与 run 目录、诊断导出收集 | mae | #9 兜底 mae 化 + #24 `getZCodeHomeRootDir()` |
+| 共享凭证/telemetry-state/个人 provider 配置(`.zcode/v2`) | mae | `ZCODE_DATA_BASE_DIR` host 透传 |
+| Electron userData/sessionData/单实例锁(`%APPDATA%\ZCode Mae`) | mae | 身份轴(#8) |
+| `~/.zcode/cli/log`、`~/.zcode/cli/rollout|debug` | **有意共享** | append 型诊断流,豁免清单 |
+| `~/.zcode/commands` | **有意共享** | 用户手写命令资产,双端可用 |
+| `~/.claude/*`、`~/.claude.json`(记忆接口/导入) | **跨工具导入** | Claude 生态只读互通 |
+| 项目级 `.zcode`、`.agents/skills`、`.agents/mcp.json` | 项目所有 | workspace 参数 join,非用户级 |
+| 远程主机 `~/.zcode/server` 等 | 远程主机轴 | 在远端 HOME 解析,不落本机 |
+
+### 有意共享清单(与 `scripts/audit-mae-user-paths.mjs` WHITELIST 同源)
+
+agent 日志目录;模型轨迹 rollout/debug(写入端 runner-debug + 读取端 modelTrajectoryFileTail);自定义命令目录(commandsService + 设置页路径提示);用户记忆接口(`~/.claude/memory`);`.claude`/`.claude.json` 跨工具导入(output-style/settings/claude-native 会话导入等);项目级 `.zcode` 与 `.agents/skills`;onboarding 使用证据对官方会话库的只读探测(env 轴注入时跟随 agent 轴);远程主机轴路径。
+
+### 已取消项(固化记录,后续会话不再重启)
+
+- `.zcode` 常量化重构(全仓 107 处)——以 audit 门禁替代,机械拦截新增散点。
+- 项目级 `.zcode` 目录改名——项目所有,双工具对等,保持。
+- 单层目录方案 B(`~/.zcode-mae` 下直接平铺,不再嵌 `.zcode`)——维持双层,与上游存储结构对齐减小同步面。
+
+### 门禁与漏网登记
+
+门禁:`pnpm audit:mae-user-paths`(接入 `verify:pre-push` 与 `test:architecture`),扫描 `apps/zcode-cli/packages/*/src` 与 `packages/*/src` 的 HOME 直拼 `.zcode` 模式(join(homedir(), ".zcode") / join(home 变量, ".zcode") / ".zcode" 首段 join / 整串 "~/.zcode" 字面量),语义放行已挂接形态(env 轴兜底、mae 身份三元、参数/配置优先),白名单与上表同源;白名单外命中即非零退出。自测:`scripts/test/audit-mae-user-paths.test.mjs`(注入假散点应红、白名单项全绿)。
+
+漏网登记(known-leftover,收口后删除对应白名单条目 ratchet 收紧):CLI 侧 user workflow 分类/按名解析根仍指官方树(script-workflow-utils / script-workflow-tool-port,#24 漏网);CLI 执行侧 workspace hook trust store 写真实 `~/.zcode/security`(#25 只收口了 services 侧);早期启动读官方 setting.json 的 HW accel 布尔(desktopChromiumHardwareAccelerationBootstrap,只读单值);standalone 设备态默认官方树(adapters/telemetry 与 services/telemetryCore,ZCODE_HOME 未注入,读为主);CLI 插件配置文件默认基目录 `~/.zcode/cli`(file-config.adapter);`ZCODE_MAILBOX_ROOT` 默认 `~` 值(create-app)。已知局限:动态段展开(`join(base, ...segments)`,如 desktop `mcpUserDirectory` 的 HOME/USERPROFILE 解析)与 shell 字符串 `$HOME/.zcode` 不在扫描模式内——desktop `mcpUserDirectory` 的用户级 MCP 目录解析未挂 `ZCODE_DESKTOP_HOME_DIR`(#25 后续核实项)。
+
 ## 守卫与测试
 
 - 新增单测文件(纯新增,rebase 不可冲掉):断言默认 flavor = mae;断言未设授权 env 时解析官方身份抛错。挂接被 rebase 冲掉时该测试变红,即"防丢网"。
