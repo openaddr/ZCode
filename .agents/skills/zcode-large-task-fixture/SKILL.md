@@ -1,6 +1,6 @@
 ---
 name: zcode-large-task-fixture
-description: Generate, verify, or remove large synthetic ZCode task fixtures in local ~/.zcode persistence for UI/session performance testing. Use when testing big conversation/task rendering, task list performance, snapshot recovery, tool-call rendering, reasoning, patches, todos, and model usage without spending time chatting manually.
+description: Generate, verify, or remove large synthetic ZCode task fixtures in local ZCode persistence for UI/session performance testing. Use when testing big conversation/task rendering, task list performance, snapshot recovery, tool-call rendering, reasoning, patches, todos, and model usage without spending time chatting manually.
 disable-model-invocation: true
 ---
 
@@ -9,8 +9,17 @@ disable-model-invocation: true
 Use this skill to create a large local task that behaves like a long-running ZCode Agent task.
 It writes both persistence layers:
 
-- App task index: `~/.zcode/v2/tasks-index.sqlite`
-- Agent session DB: `~/.zcode/cli/db/db.sqlite`
+- App task index: `<数据根>/v2/tasks-index.sqlite`
+- Agent session DB: `<数据根>/cli/db/db.sqlite`
+
+## 数据根（mae 身份感知）
+
+脚本按以下优先级解析数据根（mae fork 定制，#12 引用清理）：
+
+1. `--root <path>` 显式指定
+2. `ZCODE_STORAGE_DIR` 环境变量（与桌面运行时同轴）
+3. mae 身份（默认）：`~/.zcode-mae/.zcode`（D3 隔离红线——严禁写入官方 `~/.zcode`）
+4. 官方身份（显式 `ZCODE_ALLOW_OFFICIAL_IDENTITY=1`）：`~/.zcode`
 
 The generated task is synthetic test data. Always back up before writing and record the manifest path.
 
@@ -49,8 +58,8 @@ node .agents/skills/zcode-large-task-fixture/scripts/generate-large-task-fixture
 ## Safety
 
 - The script uses SQLite `.backup` before generation unless `--no-backup` is passed.
-- Backups are stored under `~/.zcode/perf-task-backups/<timestamp>/`.
-- Manifests are stored under `~/.zcode/perf-task-manifests/<sessionId>.json`.
+- Backups are stored under `<数据根>/perf-task-backups/<timestamp>/`.
+- Manifests are stored under `<数据根>/perf-task-manifests/<sessionId>.json`.
 - Use `--delete <sessionId>` for generated fixtures. It deletes from `tasks-index.sqlite` and cascades the agent `session` rows.
 - Do not delete manually unless you have checked the manifest and confirmed the task id starts with `sess_perf_large_`.
 

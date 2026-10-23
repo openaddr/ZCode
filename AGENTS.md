@@ -6,6 +6,8 @@
 
 涉及仓库内代码的改动，先读 [upstream-AGENTS.md](upstream-AGENTS.md) 对应章节——验证命令、架构治理、UI 与平台边界、进程与协议、日志、测试纪律都在那里。**它与 mae 目标或 `specs/mae/` 冲突时，以本文件与 specs/mae/ 为准。**
 
+> **mae 状态标注（D6 例外条款，#12）**：本 fork 已裁剪官方云端功能（登录/套餐/分享/闲时/反馈/营销/奖励/手机远控/Bots/远程工作区，specs/mae/ D7，gates 见 `packages/ui/src/mae/featureGates.ts` 与 `packages/desktop/src/main/mae/featureGates.ts`）。upstream-AGENTS.md 与上游 docs/skills 中涉及这些功能的流程、入口与验证描述在 mae 下不可达，以其为据写的测试须按 mae 语义适配（显式 `ZCODE_ALLOW_OFFICIAL_IDENTITY=1` 才回到官方语义）；深链接协议为 `zcode-mae://`（D4），上游 `zcode://` 字面量对本应用无效。
+
 ## 铁律
 
 1. **写盘先开工作区**：任何改动（代码/文档/配置）先 `jj workspace add ../zcode-ws-<代号>` 再动手，主树 `@` 只读停靠。jj 命令配方与上游同步 runbook 见 [docs/mae/sync-runbook.md](docs/mae/sync-runbook.md)。

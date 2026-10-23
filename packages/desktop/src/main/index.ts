@@ -126,6 +126,8 @@ import { createTempTextAttachment } from "./tempTextAttachment.js";
 import { flushMainE2ECoverage } from "./e2eCoverage.js";
 // mae: 启动设置文件走 bootstrap 重定向 home(#24)
 import { resolveBootstrapSettingsFile } from "./desktopDataBaseDirBootstrap.js";
+// mae: dev 态品牌图标路由(#12)
+import { MAE_BRAND_ASSET_SUBDIR } from "./mae/brandAssets.js";
 import { resolveStartupWindowBootstrap, type StartupWindowBootstrap } from "./startupWorkspace.js";
 import {
   createStartupDeepLinkConsumptionGate,
@@ -316,19 +318,20 @@ process.on("unhandledRejection", (reason) => {
   logger.error("unhandledRejection:", reason);
 });
 
+// mae: dev 态窗口/Linux 集成图标随品牌目录路由(build/mae,打包态 resources 名不变)(#12)
 const iconPath =
   process.platform === "win32"
     ? app.isPackaged
       ? join(process.resourcesPath, "icon_windows.png")
-      : join(import.meta.dirname, "../../build/icon_windows.png")
+      : join(import.meta.dirname, `../../build/${MAE_BRAND_ASSET_SUBDIR}icon_windows.png`)
     : app.isPackaged
       ? join(process.resourcesPath, "icon.png")
-      : join(import.meta.dirname, "../../build/icon.png");
+      : join(import.meta.dirname, `../../build/${MAE_BRAND_ASSET_SUBDIR}icon.png`);
 const linuxDesktopIntegrationIconPath =
   process.platform === "linux"
     ? app.isPackaged
       ? join(process.resourcesPath, "icon_512x512.png")
-      : join(import.meta.dirname, "../../build/icons/512x512.png")
+      : join(import.meta.dirname, `../../build/${MAE_BRAND_ASSET_SUBDIR}icons/512x512.png`)
     : iconPath;
 let currentApplicationLocale: Locale = DEFAULT_LOCALE;
 let closeToTrayOnWindows = true;

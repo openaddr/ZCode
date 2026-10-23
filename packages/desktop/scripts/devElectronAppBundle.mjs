@@ -1,9 +1,20 @@
 import { access, cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, posix } from "node:path";
+// mae: Dev 壳协议/名称/bundle id 随产品身份路由(#12 引用清理)——此前硬编码官方 zcode scheme
+// 与官方 ZCode Dev 身份,mae dev 壳会反过来劫持官方协议归属;显式授权的官方身份保留上游语义
+import { resolveDesktopProductIdentity } from "./desktop-product-identity.mjs";
+import { MAE_DEEP_LINK_SCHEME } from "../../shared/src/mae/deeplinkScheme.mjs";
+import { MAE_DEV_APPLICATION_NAME } from "./mae-identity.mjs";
 
-export const DEV_ELECTRON_PROTOCOL_SCHEME = "zcode";
-export const DEV_ELECTRON_APP_NAME = "ZCode Dev";
-export const DEV_ELECTRON_APP_BUNDLE_ID = "dev.zcode.app.development";
+const devElectronProductIdentity = resolveDesktopProductIdentity(process.env);
+export const DEV_ELECTRON_PROTOCOL_SCHEME =
+  devElectronProductIdentity.flavor === "mae" ? MAE_DEEP_LINK_SCHEME : "zcode";
+export const DEV_ELECTRON_APP_NAME =
+  devElectronProductIdentity.flavor === "mae" ? MAE_DEV_APPLICATION_NAME : "ZCode Dev";
+export const DEV_ELECTRON_APP_BUNDLE_ID =
+  devElectronProductIdentity.flavor === "mae"
+    ? "dev.zcode-mae.app.development"
+    : "dev.zcode.app.development";
 // 副本布局版本，见 prepareDevElectronAppBundle 中的指纹说明。
 export const DEV_ELECTRON_BUNDLE_FORMAT = 2;
 

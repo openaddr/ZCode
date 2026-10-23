@@ -18,6 +18,13 @@ afterEach(async () => {
 });
 
 describe("dev Electron app bundle", () => {
+  // mae: 默认身份翻转下,dev 壳协议/名称必须已是 mae 语义(#12 引用清理防丢网)
+  it("defaults to the mae dev identity and zcode-mae scheme (unauthorized env)", () => {
+    expect(DEV_ELECTRON_PROTOCOL_SCHEME).toBe("zcode-mae");
+    expect(DEV_ELECTRON_APP_NAME).toBe("ZCode Mae Dev");
+    expect(DEV_ELECTRON_APP_BUNDLE_ID).toBe("dev.zcode-mae.app.development");
+  });
+
   it("adds a product identity and zcode URL scheme to the raw Electron plist", () => {
     const source = `<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
@@ -73,13 +80,14 @@ describe("dev Electron app bundle", () => {
       arch: "arm64",
     });
 
-    expect(result.appPath).toBe(`${outputRoot}/41.0.3-arm64/ZCode Dev.app`);
+    // mae: 期望值随身份常量化(#12 引用清理的机械跟随)
+    expect(result.appPath).toBe(`${outputRoot}/41.0.3-arm64/${DEV_ELECTRON_APP_NAME}.app`);
     expect(result.executablePath).toBe(
-      `${outputRoot}/41.0.3-arm64/ZCode Dev.app/Contents/MacOS/Electron`,
+      `${outputRoot}/41.0.3-arm64/${DEV_ELECTRON_APP_NAME}.app/Contents/MacOS/Electron`,
     );
     const plist = await readFile(join(result.appPath, "Contents", "Info.plist"), "utf8");
-    expect(plist).toContain("dev.zcode.app.development");
-    expect(plist).toContain("<string>zcode</string>");
+    expect(plist).toContain(DEV_ELECTRON_APP_BUNDLE_ID);
+    expect(plist).toContain(`<string>${DEV_ELECTRON_PROTOCOL_SCHEME}</string>`);
   });
 
   // Windows 普通用户无符号链接权限（需开发者模式），fs.symlink EPERM；覆盖由 CI Linux 承担。
