@@ -4,7 +4,7 @@ import {
   isMaeExternalSilenceEnabled,
   isOfficialIdentityExplicitlyAllowed,
   stripMaeExternalTelemetryEnv,
-} from "../src/mae/externalSilence.js";
+} from "../src/mae/externalSilence.mjs";
 
 describe("isMaeExternalSilenceEnabled（mae 外联静默默认开）", () => {
   it("未设置授权变量时默认静默（任何构建路径默认 mae 身份）", () => {

@@ -11,6 +11,8 @@ import {
 // mae: Linux 协议注册走自有 zcode-mae scheme(#10)——desktop 文件名随 scheme 隔离,
 // 避免用户级条目与官方 zcode.desktop 互相遮蔽(specs/mae/identity-isolation.md)
 import { MAE_DEEP_LINK_SCHEME } from "@zcode/shared/mae";
+// mae: desktop entry 图标名随身份路由(#12 收口 #10 登记遗留)
+import { ZCODE_PRODUCT_FLAVOR } from "@zcode/shared";
 
 const LINUX_DEEP_LINK_DESKTOP_FILE = `${MAE_DEEP_LINK_SCHEME}.desktop`;
 const LINUX_DEEP_LINK_MIME_TYPE = `x-scheme-handler/${MAE_DEEP_LINK_SCHEME}`;
@@ -114,7 +116,8 @@ export function createLinuxDeepLinkDesktopEntry(params: {
   iconName?: string;
 }): string {
   const productName = params.productName ?? "ZCode";
-  const iconName = params.iconName ?? "zcode";
+  // mae: 图标名随身份——mae 用 zcode-mae 与官方 hicolor zcode.png 解耦(#10 遗留,#12 收口)
+  const iconName = params.iconName ?? (ZCODE_PRODUCT_FLAVOR === "mae" ? "zcode-mae" : "zcode");
   const command = {
     executablePath: params.executablePath,
     args: params.args ?? [],

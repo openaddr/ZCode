@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ZCODE_ALLOW_OFFICIAL_IDENTITY_ENV, type MaeExternalSilenceContract } from "./contract.js";
 import { maeExternalSilenceModule } from "./module.js";
-import { isMaeExternalSilenceEnabled, stripMaeExternalTelemetryEnv } from "./externalSilence.js";
+import { isMaeExternalSilenceEnabled, stripMaeExternalTelemetryEnv } from "./externalSilence.mjs";
 
 // 契约测试只 import contract 与 module，不知道实现是谁；同一份测试应同时跑真实现与跨进程代理。
 describe("mae-external-silence contract", () => {

@@ -4,7 +4,9 @@ import { pathToFileURL } from "node:url";
 import { defineConfig } from "tsup";
 import { getBuildMetadata } from "./scripts/build-metadata.mjs";
 import { resolveDesktopProductFlavor } from "./scripts/desktop-product-identity.mjs";
-import { isMaeExternalSilenceEnabled } from "@zcode/shared/mae"; // mae: 构建期遥测静默(#7)
+// mae: 构建期遥测静默(#7);#12 改为直引纯 JS 双胎——tsup 配置链的原生 ESM 加载
+// 解析不了 @zcode/shared/mae 的 TS 入口(.js→.ts 不重写),经包名导入会让 tsup 直接失败
+import { isMaeExternalSilenceEnabled } from "../shared/src/mae/externalSilence.mjs";
 const { copyGenUiRuntimeAssets } = await import(
   pathToFileURL(resolve(import.meta.dirname, "scripts/gen-ui-runtime-assets.mjs")).href
 );

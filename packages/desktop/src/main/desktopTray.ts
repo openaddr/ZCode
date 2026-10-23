@@ -14,6 +14,8 @@ import {
   renderAntialiasedStatusDotPixels,
   resolveBadgeOverlayLabel,
 } from "./unreadBadge.js";
+// mae: dev 态托盘图标随品牌目录路由(#12)
+import { MAE_BRAND_ASSET_SUBDIR } from "./mae/brandAssets.js";
 
 let desktopTray: Tray | null = null;
 let rebuildDesktopTrayContextMenu: (() => void) | null = null;
@@ -33,11 +35,11 @@ export function resolveDesktopTrayIconPath(platform: NodeJS.Platform = process.p
   if (platform === "linux") {
     return app.isPackaged
       ? join(process.resourcesPath, "icon.png")
-      : join(import.meta.dirname, "../../build/icon.png");
+      : join(import.meta.dirname, `../../build/${MAE_BRAND_ASSET_SUBDIR}icon.png`);
   }
   return app.isPackaged
     ? join(process.resourcesPath, "tray_icon.ico")
-    : join(import.meta.dirname, "../../build/icon.ico");
+    : join(import.meta.dirname, `../../build/${MAE_BRAND_ASSET_SUBDIR}icon.ico`);
 }
 
 export function createDesktopTray(options: {

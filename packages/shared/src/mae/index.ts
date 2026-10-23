@@ -1,9 +1,10 @@
+// mae: 本体迁 .mjs(类型见 externalSilence.d.mts)——tsup 配置链的原生 ESM 加载依赖纯 JS(#12)
 export {
   ZCODE_ALLOW_OFFICIAL_IDENTITY_ENV,
   isMaeExternalSilenceEnabled,
   isOfficialIdentityExplicitlyAllowed,
   stripMaeExternalTelemetryEnv,
-} from "./externalSilence.js";
+} from "./externalSilence.mjs";
 export {
   MAE_PROVIDER_SITE_BLOCKED_PATTERNS,
   MAE_PROVIDER_TEMPLATE_ALLOWLIST,

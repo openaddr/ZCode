@@ -1,9 +1,11 @@
 /* eslint-disable max-lines -- 强制升级提示窗口包含内联 HTML/CSS 和状态脚本，启动前不能依赖 renderer 包 */
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { type Locale } from "@zcode/shared";
 import type { ForceUpdateDialogText, ForceUpdateGuardLogger } from "./forceUpdateGuard.js";
 import type { ForceAutoUpdateState } from "./autoUpdater.js";
+// mae: 强更提示图标随品牌目录路由(#12)
+import { join } from "node:path";
+import { MAE_BRAND_ASSET_SUBDIR } from "./mae/brandAssets.js";
 
 const FORCE_UPDATE_PROMPT_WIDTH = 480;
 const FORCE_UPDATE_PROMPT_HEIGHT = 256;
@@ -30,7 +32,8 @@ function escapeHtml(value: string): string {
 
 function readForceUpdatePromptIcon(): string | null {
   try {
-    const iconPath = resolve(process.cwd(), "build/icon.png");
+    // mae: 品牌图标路由(build/mae);模块相对解析同时修掉对 process.cwd 的隐性依赖(#12)
+    const iconPath = join(import.meta.dirname, `../../build/${MAE_BRAND_ASSET_SUBDIR}icon.png`);
     const icon = readFileSync(iconPath).toString("base64");
     return `data:image/png;base64,${icon}`;
   } catch {
