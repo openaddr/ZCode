@@ -124,6 +124,8 @@ import {
 import { createPrimaryWindowCoordinator } from "./primaryWindowCoordinator.js";
 import { createTempTextAttachment } from "./tempTextAttachment.js";
 import { flushMainE2ECoverage } from "./e2eCoverage.js";
+// mae: 启动设置文件走 bootstrap 重定向 home(#24)
+import { resolveBootstrapSettingsFile } from "./desktopDataBaseDirBootstrap.js";
 import { resolveStartupWindowBootstrap, type StartupWindowBootstrap } from "./startupWorkspace.js";
 import {
   createStartupDeepLinkConsumptionGate,
@@ -574,7 +576,8 @@ async function runBrowserCommandOnView(params: {
 let currentDesktopZoomLevel = 0;
 let currentDesktopWindowSize: DesktopWindowSize | undefined;
 const preloadPath = join(import.meta.dirname, "../preload/index.cjs");
-const settingsFile = join(homedir(), ".zcode", "v2", "setting.json");
+// mae: 启动设置读取走重定向 home——mae 身份解析 ~/.zcode-mae,窗口状态不读官方副本;官方身份等价 homedir()(#24)
+const settingsFile = resolveBootstrapSettingsFile();
 let activeAppShutdownPolicy = resolveAppShutdownPolicy("normal", process.platform);
 let activeAppShutdownKind: AppShutdownKind | null = null;
 const WINDOWS_AGENT_FORCE_KILL_TIMEOUT_MS = 2_000;
