@@ -8,7 +8,7 @@
 | --- | --- |
 | D1 | 构建工具链用 mise 隔离(node 24.14.0 / pnpm 10.33.2,已落地) |
 | D2 | 不对接官方账号体系;账号系统后置,后续自建 |
-| D3 | 用户数据与官方完全隔离,零交集 |
+| D3 | 用户级数据/运行态/配置存储完全隔离(`~/.zcode-mae`);**终稿**(有意共享清单、目录级全景、已取消项、漏网登记)见 [identity-isolation.md](identity-isolation.md)「D3 定稿」,由 `audit:mae-user-paths` 门禁看守(#26) |
 | D4 | 深链接协议换 `zcode-mae://`;官方 `zcode://` 链接对 mae 无效为预期行为 |
 | D5 | 更新通道暂不做;后续自建 generic feed;appId 发版后不变 |
 | D6 | 定制隔离纪律:新增文件优先(细则见 docs/mae/sync-runbook.md 附录);**AGENTS.md 为我方自有文件**(薄宪法层),上游规则快照在 `upstream-AGENTS.md`,同步时整体替换、冲突以 AGENTS.md 与 specs/mae/ 为准 |
@@ -32,7 +32,7 @@
 
 ## 全局验收
 
-- 官方版与 zcode-mae 同机双装双开:互不激活对方窗口(单实例锁隔离);`%APPDATA%\ZCode Mae` 与 `%APPDATA%\ZCode` 互不相交;`~/.zcode-mae/.zcode` 与 `~/.zcode` 互不相交。
+- 官方版与 zcode-mae 同机双装双开:互不激活对方窗口(单实例锁隔离);`%APPDATA%\ZCode Mae` 与 `%APPDATA%\ZCode` 互不相交;`~/.zcode-mae/.zcode` 与 `~/.zcode` 除 D3 有意共享清单(日志/轨迹/命令/记忆接口/跨工具导入/项目级/远程轴)外互不相交。
 - 网络审计:运行期对官方域名的请求仅剩用户自配模型 API(若有)与插件市场 GitHub 源。
 - 全新克隆、不设任何环境变量、任一构建入口 → 产物默认 mae 身份。
 - `pnpm typecheck`、`pnpm lint`、`pnpm verify:pre-push` 真实通过。
