@@ -245,7 +245,10 @@ describe("DEFAULT_WHITELIST:与豁免清单同源", () => {
       "remote-host-path",
       "known-leftover",
     ]);
-    assert.ok(DEFAULT_WHITELIST.length >= 15, "豁免清单条目应完整迁移");
+    assert.ok(
+      DEFAULT_WHITELIST.length >= 13,
+      "豁免清单条目应完整迁移(#31 删 8 条 known-leftover 后 13 条)",
+    );
     for (const entry of DEFAULT_WHITELIST) {
       assert.match(entry.id, /^[\w-]+$/u);
       assert.ok(WHITELIST_GROUPS.includes(entry.group));
@@ -261,13 +264,19 @@ describe("DEFAULT_WHITELIST:与豁免清单同源", () => {
       "mae-hooked-session-db-default",
       "mae-hooked-contracts-storage-default",
       "mae-hooked-export-logs-segments",
-      "mae-leftover-script-workflow-scope",
-      "mae-leftover-script-workflow-named",
-      "mae-leftover-hook-trust-store",
     ]) {
       assert.ok(ids.includes(required), `白名单缺少 ${required}`);
     }
     assert.equal(new Set(ids).size, ids.length, "白名单 id 不得重复");
+  });
+
+  test("known-leftover 组保持清空(#31 收口后 ratchet:新漏网须显式改本断言登记)", () => {
+    const leftovers = DEFAULT_WHITELIST.filter((entry) => entry.group === "known-leftover");
+    assert.deepEqual(
+      leftovers.map((entry) => entry.id),
+      [],
+      "known-leftover 应为空——出现新条目说明有新漏网,须先收口或在此有意识登记",
+    );
   });
 
   test("known-leftover 条目必须带 issue 引用,防止无主豁免", () => {

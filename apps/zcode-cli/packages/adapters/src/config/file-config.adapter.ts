@@ -11,6 +11,8 @@ import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import type { RuntimeConfigPatch, UiLocale } from "@zcode/contracts";
+// mae: 默认基目录委托统一 resolver(#25 同链),CLI 与 services 读写同一份用户级 config.json(#31)
+import { resolveMaeAwareUserHomeDir } from "@zcode/shared/mae";
 import { z } from "zod";
 import {
   CANONICAL_CUA_PLUGIN_ID,
@@ -59,7 +61,15 @@ export interface PluginRemovePatchResult {
 }
 
 const DEFAULT_CONFIG_FILE = "config.json";
-const DEFAULT_BASE_DIR = "~/.zcode/cli";
+
+// mae: 默认基目录挂 mae 用户级 home resolver(#25 同链)——mae 桌面 host 注入
+// ZCODE_DESKTOP_HOME_DIR 后,CLI 侧插件配置与 services 侧 hooksService/mcpSyncService
+// 读写同一份 {home}/.zcode/cli/config.json;未注入(官方 CLI/官方桌面)保持上游
+// ~/.zcode/cli 语义(homedir 兜底)(#31)
+function resolveDefaultBaseDir(): string {
+  const home = resolveMaeAwareUserHomeDir();
+  return home ? join(home, ".zcode", "cli") : join(homedir(), ".zcode", "cli");
+}
 
 /**
  * Resolve path with ~ expansion
@@ -78,7 +88,7 @@ export function loadFileConfig(filePath?: string, options: FileConfigOptions = {
   const resolvedPath = filePath
     ? resolvePath(filePath)
     : join(
-        resolvePath(options.baseDir ?? DEFAULT_BASE_DIR),
+        resolvePath(options.baseDir ?? resolveDefaultBaseDir()),
         options.configFileName ?? DEFAULT_CONFIG_FILE,
       );
 
@@ -441,7 +451,7 @@ export async function removeSuppressedBuiltinInFileConfig(
  * Get default config file path
  */
 export function getDefaultConfigPath(): string {
-  return join(resolvePath(DEFAULT_BASE_DIR), DEFAULT_CONFIG_FILE);
+  return join(resolveDefaultBaseDir(), DEFAULT_CONFIG_FILE);
 }
 
 /**

@@ -1,15 +1,23 @@
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+// mae: 默认 setting.json 解析复用启动 bootstrap 的 mae 感知解析(#31)
+import { resolveBootstrapSettingsFile } from "./desktopDataBaseDirBootstrap.js";
 
 interface ChromiumHardwareAccelerationApp {
   disableHardwareAcceleration(): void;
 }
 
 export function resolveChromiumHardwareAccelerationSettingsFile(
-  homePath: string = homedir(),
+  homePath?: string,
 ): string {
-  return join(homePath, ".zcode", "v2", "setting.json");
+  if (homePath) {
+    // mae: 显式 homePath(测试注入)优先,按该 home 解析(#31)
+    return join(homePath, ".zcode", "v2", "setting.json");
+  }
+  // mae: 默认(未显式传 homePath)与启动 setting.json 同根(desktopDataBaseDirBootstrap 的
+  // mae 感知解析)——mae 身份读 ~/.zcode-mae/.zcode/v2,官方身份等价 homedir() 上游语义,
+  // 早期 HW accel 布尔不读官方副本(#31)
+  return resolveBootstrapSettingsFile();
 }
 
 export function extractBootstrapChromiumHardwareAccelerationEnabled(rawValue: unknown): boolean {
