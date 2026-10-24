@@ -4799,7 +4799,11 @@ export const config: WebdriverIO.Config = {
                     spec.endsWith("conversation-session-background-bash-output.test.ts"),
                   )
                 ? 360000
-                : requestSecuritySpecTimeout(configuredE2ESpecs, 120000)) + manualReviewHoldMs,
+                : // mae: 验收 spec(#34)在 before 钩子按需产出 win-unpacked 打包构建(冷缓存约 10-30 分钟),
+                // 并真实启动两轮 mae 进程做目录快照/单实例/网络审计;沿用独立预算模式,不动普通 spec 口径。
+                configuredE2ESpecs.some((spec) => spec.endsWith("mae-acceptance.test.ts"))
+                  ? 45 * 60_000
+                  : requestSecuritySpecTimeout(configuredE2ESpecs, 120000)) + manualReviewHoldMs,
   },
   async onPrepare() {
     try {

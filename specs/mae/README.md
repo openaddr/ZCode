@@ -34,6 +34,7 @@
 
 - 官方版与 zcode-mae 同机双装双开:互不激活对方窗口(单实例锁隔离);`%APPDATA%\ZCode Mae` 与 `%APPDATA%\ZCode` 互不相交;`~/.zcode-mae/.zcode` 与 `~/.zcode` 除 D3 有意共享清单(日志/轨迹/命令/记忆接口/跨工具导入/项目级/远程轴)外互不相交。
 - 网络审计:运行期对官方域名的请求仅剩用户自配模型 API(若有)与插件市场 GitHub 源。
+- **自动化部分已覆盖(#34)**:E2E `packages/desktop/test/e2e/mae-acceptance.test.ts`(定向运行方式见文件头注释)机械验证目录零交集(官方 `%APPDATA%\ZCode`、`~/.zcode` 快照 diff,D3 豁免表排除)、单实例自洽(第二实例退出+首实例存活+进程数不变)与启动期官方域名 denylist(zcode.z.ai/bigmodel.cn/z.ai/api.z.ai/cdn-zcode.z.ai)零命中,证据(目录快照对比+请求清单)落 `ZCODE_E2E_ARTIFACT_DIR`。系统级全进程抓包(绕过应用层代理的原生流量)仍为人工步骤(#4)。
 - 全新克隆、不设任何环境变量、任一构建入口 → 产物默认 mae 身份。
 - `pnpm typecheck`、`pnpm lint`、`pnpm verify:pre-push` 真实通过。
 - 触碰上游文件的每处已按 docs/mae/sync-runbook.md 附录三强制登记(≤10 行、`// mae:` 标记)。
