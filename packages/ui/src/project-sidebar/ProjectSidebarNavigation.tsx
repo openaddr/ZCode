@@ -1,4 +1,4 @@
-import { Blocks, CalendarClock } from "lucide-react";
+import { Blocks, CalendarClock, Ticket } from "lucide-react";
 import { TID_AUTOMATIONS_OPEN } from "@zcode/shared/test-ids";
 import type { ProjectSidebarProps } from "@/project-sidebar/contract.js";
 import { Button } from "@/components/ui/button.js";
@@ -18,6 +18,9 @@ export function ProjectSidebarNavigation({
     | "automationsActive"
     | "onOpenPluginStore"
     | "pluginStoreActive"
+    // mae: DTS 列表页签(specs/mae/dts-flow.md #41)
+    | "onOpenDtsList"
+    | "dtsListActive"
     | "webRemoteControlWorkspaceSwitcher"
   >;
   onCreate(): void;
@@ -56,6 +59,18 @@ export function ProjectSidebarNavigation({
       >
         <Blocks className="size-4" />
         {intl.formatMessage({ id: "workspace.openPluginsSettings" })}
+      </Button>
+      {/* mae: DTS 列表页签(specs/mae/dts-flow.md #41) */}
+      <Button
+        variant="ghost"
+        size="lg"
+        className={`w-full justify-start gap-2 ${props.dtsListActive ? "bg-selected text-foreground" : ""}`}
+        aria-pressed={props.dtsListActive ?? false}
+        data-testid="dts-list-sidebar-open"
+        onClick={() => props.onOpenDtsList?.()}
+      >
+        <Ticket className="size-4" />
+        {intl.formatMessage({ id: "workspace.openDtsList" })}
       </Button>
     </div>
   );

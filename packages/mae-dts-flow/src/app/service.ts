@@ -44,6 +44,7 @@ export interface DtsFlowService {
   /** 发起动作:台账+工作区(repo/、报告模板、项目级 MCP 配置、物化技能)+开场词,一口气(#40 决议 2)。 */
   initIssue(input: {
     ticket: string;
+    moduleName?: string | null;
     interventionTier?: InterventionTier;
     detail?: DtsTicketDetail | null;
   }): Promise<{ ledger: IssueLedger; workspace: InitWorkspaceResult; openingBrief: string }>;
