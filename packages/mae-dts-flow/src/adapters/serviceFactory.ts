@@ -6,8 +6,10 @@ import {
   KNOWN_DEPENDENCIES,
 } from "../app/service.js";
 import type { DtsFlowConfig } from "../domain/config.js";
+import { isActionable } from "../domain/dts.js";
 import { probeDependency } from "../domain/depsProbe.js";
 import { type ResolvedModuleBindings, resolveModuleBindings } from "../domain/moduleBindings.js";
+import { type DtsGateway, createDtsGateway, tokenFileReader } from "./dtsGateway.js";
 import { fsProbeOptions } from "./fsProbe.js";
 import {
   createIssueLedger,
@@ -21,6 +23,16 @@ import { fetchCloudModuleBindings, loadLocalModuleBindings, localBindingsPath } 
 export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowServiceDeps): DtsFlowService {
   const now = deps.now ?? (() => new Date());
   let cachedBindings: ResolvedModuleBindings | null = null;
+  let gateway: DtsGateway | null = null;
+  const getGateway = (): DtsGateway => {
+    if (gateway === null) {
+      gateway = createDtsGateway(
+        { dtsGatewayUrl: config.dtsGatewayUrl, dtsTokenPath: config.dtsTokenPath, mock: config.mock },
+        { fetch: deps.fetch, readToken: tokenFileReader(config.dtsTokenPath) },
+      );
+    }
+    return gateway;
+  };
 
   return {
     config,
@@ -60,6 +72,13 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
     },
     getCachedModuleBindings() {
       return cachedBindings;
+    },
+    async listTickets() {
+      const tickets = await getGateway().listByOwner(config.employeeId);
+      return tickets.map((ticket) => ({ ...ticket, actionable: isActionable(ticket.status) }));
+    },
+    async getTicket(ticket: string) {
+      return getGateway().getTicket(config.employeeId, ticket);
     },
     async createIssue(input) {
       return createIssueLedger(config.dataDir, { ...input, now });
