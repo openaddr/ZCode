@@ -12,7 +12,7 @@ import {
 
 export async function exampleDtsFlowService(configPath: string | undefined): Promise<void> {
   const config = await loadConfig({ configPath });
-  const service: DtsFlowService = createDtsFlowService(config, { fetch });
+  const service: DtsFlowService = createDtsFlowService(config, { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } });
 
   const ledger: IssueLedger = await service.createIssue({ ticket: "DTS-2026-1001" });
   await recordStage(config.dataDir, ledger.ticket, "dts_info", "done");

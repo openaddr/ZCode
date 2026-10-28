@@ -3,6 +3,8 @@
 export interface DtsFlowConfig {
   /** 服务数据根(台账、事件流、本地兜底配置都住这里,在问题工作区之外)。 */
   dataDir: string;
+  /** 问题工作区根(每单一个子目录:repo/ 克隆、分析报告、物化技能)。 */
+  issuesRoot: string;
   /** 依赖组件目录(codehubcli 等;缺席不阻启动,调用时 fail-loud)。 */
   binDir: string;
   /** 工号:分支名 master_<工号>_<单号> 的因子;mock 模式缺省 dev。 */
@@ -22,6 +24,7 @@ export interface DtsFlowConfig {
 export class DtsFlowConfigError extends Error {}
 
 export const KNOWN_CONFIG_KEYS: readonly string[] = [
+  "issuesRoot",
   "dataDir",
   "binDir",
   "employeeId",
@@ -54,6 +57,7 @@ export function assembleConfig(input: AssembleConfigInput): DtsFlowConfig {
   }
 
   const dataDir = pickString(fileValues, "dataDir") ?? joinPath(input.maeRoot, "dts-flow");
+  const issuesRoot = pickString(fileValues, "issuesRoot") ?? joinPath(input.maeRoot, "dts-issues");
   const mock = fileValues["mock"] === true;
   const employeeId = pickString(fileValues, "employeeId") ?? (mock ? "dev" : "");
   if (!employeeId) {
@@ -62,6 +66,7 @@ export function assembleConfig(input: AssembleConfigInput): DtsFlowConfig {
 
   return {
     dataDir,
+    issuesRoot,
     binDir: pickString(fileValues, "binDir") ?? joinPath(input.maeRoot, "bin"),
     employeeId,
     cloudBaseUrl: assertHttpUrlIfPresent(pickString(fileValues, "cloudBaseUrl"), "cloudBaseUrl"),

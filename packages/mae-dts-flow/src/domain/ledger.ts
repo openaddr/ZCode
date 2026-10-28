@@ -20,8 +20,14 @@ export interface IssueLedger {
   stages: Record<IssueStage, StageStatus>;
   /** 修复→分析的重开轮次(红灯返工等)。 */
   rounds: number;
-  /** 分析确认闸放行时间;null=尚未放行。 */
-  analysisConfirmedAt: string | null;
+  /** 分析确认闸(两道核验之一;full_auto 档自动放行)。 */
+  analysisGate: {
+    status: "waiting" | "confirmed" | "rejected" | "auto_confirmed";
+    askedAt: string;
+    answeredAt: string | null;
+  } | null;
+  /** MR 申报账(create_mr 记账 + complete_stage 申报;验绿门数据源)。 */
+  mrDeclarations: Array<{ repo: string; url: string; declaredAt: string }>;
   /** 流程终点:全部 MR 流水线跑绿并收口。 */
   closedAt: string | null;
   archived: boolean;
