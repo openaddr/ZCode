@@ -6285,6 +6285,11 @@ const enUS: Record<string, string> = {
   "mae.dts.start.note": "Additional info (optional)",
   "mae.dts.start.cancel": "Cancel",
   "mae.dts.start.confirm": "Start",
+  "mae.dts.stage.heading": "Processing stage",
+  "mae.dts.stage.closed": "Closed — ready to archive",
+  "mae.dts.stage.gateWaiting": "Waiting for confirmation: issue-analysis.md",
+  "mae.dts.stage.gateReject": "Reject",
+  "mae.dts.stage.gateConfirm": "Confirm, proceed to fix",
   "automations.pageTab.automation": "Automations",
   "automations.pageTab.workflow": "Workflows",
   "workflows.hub.description":
