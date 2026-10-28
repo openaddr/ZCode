@@ -37,6 +37,7 @@ import {
 import { TaskGroupedView } from "@/project-sidebar/TaskGroupedView.js";
 import { taskGroupKey } from "@/project-sidebar/grouped-view.js";
 import { ProjectTaskRows } from "@/project-sidebar/ProjectTaskRows.js";
+import { DtsIssueSessionsSection } from "@/mae/dts/DtsIssueSessionsSection.js";
 import {
   ProjectSidebarNode,
   runProjectAction as action,
@@ -249,6 +250,8 @@ export const ProjectSidebar = memo(function ProjectSidebar(props: ProjectSidebar
                         <HomeOnlyWorkspaceRows switcher={homeOnlySwitcher} />
                       ) : view === "projects" ? (
                         <>
+                          {/* mae: DTS 问题会话分组(服务缺席自动隐藏,specs/mae/dts-flow.md) */}
+                          <DtsIssueSessionsSection onCreateIssueSession={props.onCreateDtsIssueSession ?? (() => {})} />
                           <ProjectTaskRows
                             kind="pinned"
                             tasks={selectProjectRows(tree, { kind: "pinned" })}

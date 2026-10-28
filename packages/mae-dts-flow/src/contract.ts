@@ -91,7 +91,6 @@ export {
   validateAnalysisReport,
 } from "./domain/issueFlow.js";
 export {
-  type InitWorkspaceResult,
   initIssueWorkspace,
   readAnalysisReport,
   workspaceDir,

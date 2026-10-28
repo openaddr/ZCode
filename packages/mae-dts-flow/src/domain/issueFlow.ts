@@ -77,6 +77,14 @@ export function buildMcpConfigJson(selfCommand: string, selfArgs: string[]): str
   return `${JSON.stringify({ mcp: { servers: { "dts-flow": { type: "stdio", command: selfCommand, args: selfArgs } } } }, null, 2)}\n`;
 }
 
+/** 问题工作区一次性物化的产物路径(#40 决议 2)。 */
+export interface InitWorkspaceResult {
+  workspacePath: string;
+  analysisReportPath: string;
+  skillPath: string;
+  mcpConfigPath: string;
+}
+
 export interface SkillContext {
   ticket: string;
   employeeId: string;

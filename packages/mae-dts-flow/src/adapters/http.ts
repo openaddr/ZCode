@@ -49,6 +49,12 @@ async function handle(
   response: import("node:http").ServerResponse,
 ): Promise<void> {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+  // UI 渲染进程直连本服务(app origin → 127.0.0.1 跨域):全响应带 CORS。
+  if (request.method === "OPTIONS") {
+    response.writeHead(204, corsHeaders());
+    response.end();
+    return;
+  }
   const route = `${request.method ?? "GET"} ${url.pathname}`;
   switch (route) {
     case "GET /api/health":
@@ -150,8 +156,16 @@ async function readJsonBody(request: import("node:http").IncomingMessage): Promi
   }
 }
 
+function corsHeaders(): Record<string, string> {
+  return {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-headers": "content-type",
+  };
+}
+
 function respondJson(response: import("node:http").ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body);
-  response.writeHead(status, { "content-type": "application/json; charset=utf-8" });
+  response.writeHead(status, { "content-type": "application/json; charset=utf-8", ...corsHeaders() });
   response.end(payload);
 }

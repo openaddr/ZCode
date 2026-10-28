@@ -6261,6 +6261,8 @@ const enUS: Record<string, string> = {
   "chat.toolCall.workflow.models.truncated": "Not all models are shown",
 
   "automations.pageTab.ariaLabel": "Automations page",
+  // mae: DTS issue sessions group
+  "mae.dts.issueSessions": "Issue sessions",
   "automations.pageTab.automation": "Automations",
   "automations.pageTab.workflow": "Workflows",
   "workflows.hub.description":

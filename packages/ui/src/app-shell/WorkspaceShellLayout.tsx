@@ -1259,6 +1259,13 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
   );
   // 工作流「运行」现由中枢直接启动（docs/dynamic-workflow/launch.md）：GUI 建空会话 +
   // 发 startSavedWorkflow 命令，不再合成对话文案。本层只在 accepted 后把会话切到前台。
+  // mae: DTS 问题会话——侧栏分组点击→在问题工作区开/续会话(#40;initialPrompt 只填草稿,用户确认发送)
+  const handleCreateDtsIssueSession = useCallback(
+    (workspacePath: string, initialPrompt: string) => {
+      handleCreateTaskInChat({ initialPrompt, targetWorkspace: { workspacePath } });
+    },
+    [handleCreateTaskInChat],
+  );
   const handleSelectTaskInChat = useCallback(
     (
       targetWorkspacePath: string,
@@ -1943,6 +1950,8 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
           : handleOpenSidebarFiles
       }
       onSelectTask={handleSelectTaskInChat}
+      // mae: DTS 问题会话分组数据链
+      onCreateDtsIssueSession={handleCreateDtsIssueSession}
       onStartDraftInWorkspace={handleStartDraftInWorkspaceInChat}
       onOpenCodeViewer={handleOpenCodeViewer}
       onOpenBrowserUrl={handleOpenBrowserUrl}
