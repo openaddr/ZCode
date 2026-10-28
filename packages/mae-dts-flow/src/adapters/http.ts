@@ -73,8 +73,25 @@ async function handle(
     case "GET /api/issues":
       respondJson(response, 200, { issues: await service.listIssues() });
       return;
+    case "GET /api/dts/tickets": {
+      const tickets = await service.listTickets();
+      const actionable = tickets.filter((ticket) => ticket.actionable);
+      respondJson(response, 200, {
+        mock: service.config.mock,
+        total: tickets.length,
+        actionableCount: actionable.length,
+        blockedCount: tickets.length - actionable.length,
+        tickets: actionable,
+      });
+      return;
+    }
     default:
       break;
+  }
+  const ticketMatch = /^\/api\/dts\/tickets\/([^/]+)$/.exec(url.pathname);
+  if (request.method === "GET" && ticketMatch !== null) {
+    respondJson(response, 200, await service.getTicket(decodeURIComponent(ticketMatch[1] as string)));
+    return;
   }
   const issueMatch = /^\/api\/issues\/([^/]+)\/events$/.exec(url.pathname);
   if (request.method === "GET" && issueMatch !== null) {

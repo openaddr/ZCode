@@ -1,5 +1,6 @@
 import type { DtsFlowConfig } from "../domain/config.js";
 import type { DependencyProbe } from "../domain/depsProbe.js";
+import type { DtsTicketDetail, DtsTicketSummary } from "../domain/dts.js";
 import type { IssueEvent, IssueLedger, InterventionTier } from "../domain/ledger.js";
 import type { ResolvedModuleBindings } from "../domain/moduleBindings.js";
 
@@ -32,6 +33,9 @@ export interface DtsFlowService {
   probeDependencies(): Promise<DependencyProbe[]>;
   refreshModuleBindings(): Promise<ResolvedModuleBindings>;
   getCachedModuleBindings(): ResolvedModuleBindings | null;
+  /** 名下 DTS 单(全部状态,actionable 标记可发起;调用期未配置网关 fail-loud)。 */
+  listTickets(): Promise<Array<DtsTicketSummary & { actionable: boolean }>>;
+  getTicket(ticket: string): Promise<DtsTicketDetail>;
   createIssue(input: { ticket: string; interventionTier?: InterventionTier }): Promise<IssueLedger>;
   listIssues(): Promise<IssueLedger[]>;
   loadIssue(ticket: string): Promise<IssueLedger>;

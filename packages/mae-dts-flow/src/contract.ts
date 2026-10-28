@@ -23,6 +23,27 @@ export {
 } from "./domain/depsProbe.js";
 export { fsExists, fsProbeOptions } from "./adapters/fsProbe.js";
 export {
+  DTS_ACTIONABLE_STATUS,
+  DtsFlowGatewayError,
+  type DtsTicketDetail,
+  type DtsTicketSummary,
+  buildDetailArgs,
+  buildListArgs,
+  dtsVersionGroup,
+  extractDatas,
+  isActionable,
+  mapDtsRow,
+  parseToolResultText,
+} from "./domain/dts.js";
+export {
+  type CreateGatewayInput,
+  type DtsGateway,
+  MockDtsGateway,
+  McpDtsGateway,
+  createDtsGateway,
+  tokenFileReader,
+} from "./adapters/dtsGateway.js";
+export {
   DEFAULT_INTERVENTION_TIER,
   ISSUE_STAGES,
   IssueLedgerError,
