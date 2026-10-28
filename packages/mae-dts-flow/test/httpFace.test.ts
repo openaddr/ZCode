@@ -81,6 +81,10 @@ describe("http face", () => {
       };
       expect(events.events[0]?.kind).toBe("issue_created");
 
+      const ledger = await fetch(`${base}/api/issues/DTS-2026-1002`);
+      expect(ledger.status).toBe(200);
+      const missingLedger = await fetch(`${base}/api/issues/DTS-2026-9999`);
+      expect(missingLedger.status).toBe(500);
       const notFound = await fetch(`${base}/api/unknown`);
       expect(notFound.status).toBe(404);
 

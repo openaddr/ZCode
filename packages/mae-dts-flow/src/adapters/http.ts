@@ -145,6 +145,11 @@ async function handle(
     respondJson(response, 200, { events });
     return;
   }
+  const ledgerMatch = /^\/api\/issues\/([^/]+)$/.exec(url.pathname);
+  if (request.method === "GET" && ledgerMatch !== null) {
+    respondJson(response, 200, await service.loadIssue(decodeURIComponent(ledgerMatch[1] as string)));
+    return;
+  }
   respondJson(response, 404, { error: `未知路由: ${route}` });
 }
 
