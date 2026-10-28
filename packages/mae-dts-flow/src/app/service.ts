@@ -3,7 +3,7 @@ import type { DependencyProbe } from "../domain/depsProbe.js";
 import type { DtsTicketDetail, DtsTicketSummary } from "../domain/dts.js";
 import type { IssueEvent, IssueLedger, InterventionTier } from "../domain/ledger.js";
 import type { ResolvedModuleBindings } from "../domain/moduleBindings.js";
-import type { InitWorkspaceResult } from "../adapters/workspaceStore.js";
+import type { InitWorkspaceResult } from "../domain/issueFlow.js";
 
 /** 一期已知依赖组件(UI 依赖面板与调用期守卫共用这份清单)。 */
 export const KNOWN_DEPENDENCIES = ["codehubcli"] as const;
@@ -63,7 +63,7 @@ export interface DtsFlowService {
   pollTickets(): Promise<Array<{ ticket: string; verdict: "green" | "red" | "running" | "exhausted" | "skipped" }>>;
   /** 归档:仅 closedAt 在场(验绿收口)后允许。 */
   archiveIssue(ticket: string): Promise<IssueLedger>;
-  listIssues(): Promise<IssueLedger[]>;
+  listIssues(): Promise<Array<IssueLedger & { workspacePath: string }>>;
   loadIssue(ticket: string): Promise<IssueLedger>;
   issueEvents(ticket: string, tail?: number): Promise<IssueEvent[]>;
 }

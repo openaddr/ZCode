@@ -145,6 +145,8 @@ export interface ProjectSidebarProps {
   onOpenPluginStore?: () => void;
   automationsActive?: boolean;
   pluginStoreActive?: boolean;
+  // mae: DTS 问题会话分组(#41/#40)——点击单条经 shell 建会话链路打开问题工作区
+  onCreateDtsIssueSession?: (workspacePath: string, initialPrompt: string, ticket: string) => void;
   onFileTreeOpenChange?: (open: boolean) => void;
   onWebRemoteTaskOpen?: (options: { crossWorkspace: boolean }) => void;
   onWebRemoteTaskSwitchingChange?: (switching: boolean) => void;

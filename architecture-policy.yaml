@@ -909,3 +909,9 @@ exceptions:
       - packages/desktop/src/main/mae/
       - packages/ui/src/components/marketing-touch/MarketingTouchProvider.tsx
     reason: mae fork 定制(specs/mae/feature-gates.md):packages/ui/src/mae 与 packages/desktop/src/main/mae 是 feature gate 禁用清单的唯一所有者(纯新增、静态清单,上游 ui/desktop 模块为 legacy 非受管,整体 adopt 不在定制票范围);MarketingTouchProvider.tsx 为上游快照 introduced 文件的薄改(仅 gate 早退挂接,≤10 行)。
+  # mae: DTS 问题流 UI 定制(specs/mae/dts-flow.md D15)——问题列表/会话分组/阶段块组件唯一所有者
+  - id: mae-dts-flow-ui-unmanaged-files
+    rule: unmanaged-new-file
+    paths:
+      - packages/ui/src/mae/dts/
+    reason: mae fork 定制(specs/mae/dts-flow.md D15):packages/ui/src/mae/dts 是 DTS 问题流 UI 组件的唯一所有者(纯新增,数据经本地服务 HTTP;上游 ui 模块为 legacy 非受管,整体 adopt 不在定制票范围)。

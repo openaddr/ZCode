@@ -6,6 +6,7 @@ import {
   buildAnalysisReportTemplate,
   buildMcpConfigJson,
   buildSkillMarkdown,
+  type InitWorkspaceResult,
 } from "../domain/issueFlow.js";
 
 export function workspaceDir(issuesRoot: string, ticket: string): string {
@@ -23,13 +24,6 @@ export interface InitWorkspaceInput {
   /** 服务自身 stdio 启动命令(写进项目级 .zcode/config.json,会话自动挂 MCP 面)。 */
   selfCommand: string;
   selfArgs: string[];
-}
-
-export interface InitWorkspaceResult {
-  workspacePath: string;
-  analysisReportPath: string;
-  skillPath: string;
-  mcpConfigPath: string;
 }
 
 export async function initIssueWorkspace(input: InitWorkspaceInput): Promise<InitWorkspaceResult> {
