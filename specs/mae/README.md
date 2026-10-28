@@ -20,6 +20,7 @@
 | D12 | 插件市场保留官方只读(浏览/安装/更新);本地创建插件不受影响 |
 | D13 | 版本采用 CalVer `YYYY.MMDD.PATCH`(如 2026.1021.0);上游基线进 build-meta 并在关于页展示 |
 | D14 | **默认身份翻转**:任何构建路径、任何环境默认产出 mae 身份;官方身份仅在显式 `ZCODE_ALLOW_OFFICIAL_IDENTITY=1` 时可产出,未授权时构建期抛错(守卫内建于身份解析);另以新增文件中的默认身份单测防 rebase 丢挂接。不再需要独立的构建脚本产物断言 |
+| D15 | **DTS 问题流本地化**:mae-flow-cloud 的 DTS 问题单处理在 zcode-mae 内闭环(列表/发起/阶段可见/MR 全绿);本地服务双面承载+四件套工具+两道核验;详见 [dts-flow.md](dts-flow.md) |
 
 ## Patch 划分
 
@@ -29,6 +30,7 @@
 | P1 | 功能裁剪(feature gates + provider 目录 + 遥测置空;独立 patch,测试梳理量大) | [feature-gates.md](feature-gates.md) |
 | P2 | 版本与品牌 | [versioning-branding.md](versioning-branding.md) |
 | P3 | 后续项(远程工作区资源自建、自有账号、自建更新 feed、自建插件市场源) | 各规格末尾「后续项」 |
+| P4 | DTS 问题流本地化(服务+工具+UI,7 张施工票) | [dts-flow.md](dts-flow.md) |
 
 ## 全局验收
 
