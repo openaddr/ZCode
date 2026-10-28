@@ -65,6 +65,14 @@ modules:
     requires: []
     publicEntrypoints: [packages/shared/src/mae/index.ts, packages/shared/src/mae/contract.ts]
     layers: {domain: .}
+  # mae: DTS 问题流本地服务(fork 定制,specs/mae/dts-flow.md D15)——独立新包,零内部依赖,三层自上而下
+  - id: mae-dts-flow
+    roots: [packages/mae-dts-flow/src]
+    managed: true
+    requires: []
+    publicEntrypoints: [packages/mae-dts-flow/src/index.ts, packages/mae-dts-flow/src/contract.ts]
+    layers: {domain: domain, app: app, adapters: adapters}
+    layerOrder: [domain, app, adapters]
   - id: stream-animate
     roots: [packages/stream-animate/src]
     managed: false
