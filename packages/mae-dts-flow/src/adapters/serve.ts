@@ -1,9 +1,11 @@
 import { mkdir } from "node:fs/promises";
 
 import { createDtsFlowService } from "./serviceFactory.js";
+import type { DtsFlowService } from "../app/service.js";
 import { loadConfig } from "./configLoader.js";
 import { startHttpFace } from "./http.js";
 import { SERVER_INFO_TOOL, createMcpStdioFace, type McpFaceHandlers } from "./mcpStdio.js";
+import { buildFlowToolHandlers } from "./mcpTools.js";
 
 interface ServeArgs {
   config?: string;
@@ -45,48 +47,32 @@ async function main(): Promise<void> {
   if (args.mock) config.mock = true;
   await mkdir(config.dataDir, { recursive: true });
 
-  const service = createDtsFlowService(config, { fetch });
+  const selfServePath = new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+  const selfArgs = ["--import", "tsx", selfServePath, "--stdio"];
+  if (args.config !== undefined) selfArgs.push("--config", args.config);
+  const service = createDtsFlowService(config, {
+    fetch,
+    selfLauncher: { command: process.execPath, args: selfArgs },
+  });
   const face = await startHttpFace(service, { port: args.port ?? config.httpPort });
   // 日志只走 stderr:--stdio 时 stdout 是 MCP 协议通道,任何非协议字节都会打断会话客户端。
   console.error(`[mae-dts-flow] HTTP 面 http://127.0.0.1:${face.port} (mock=${String(config.mock)}, 工号=${config.employeeId})`);
 
   if (args.stdio) {
-    const handlers: McpFaceHandlers = {
-      listTools: () => [SERVER_INFO_TOOL],
-      callTool: async (name, _arguments) => {
-        if (name !== SERVER_INFO_TOOL.name) {
-          throw new Error(`未知工具: ${name}`);
-        }
-        const summary = await service.configSummary();
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  server: "mae-dts-flow",
-                  employeeId: summary.employeeId,
-                  mock: summary.mock,
-                  dataDir: summary.dataDir,
-                  cloudBaseUrl: summary.cloudBaseUrl,
-                  dtsGatewayConfigured: summary.dtsGatewayUrl !== null,
-                  dtsTokenPresent: summary.dtsTokenPresent,
-                },
-                null,
-                2,
-              ),
-            },
-          ],
-        };
-      },
-    };
+    const handlers: McpFaceHandlers = (() => {
+      const flow = buildFlowToolHandlers(service);
+      return {
+        listTools: () => [SERVER_INFO_TOOL, ...flow.listTools()],
+        callTool: async (name, args_) => (name === SERVER_INFO_TOOL.name ? textSelfInfo(service) : flow.callTool(name, args_)),
+      };
+    })();
     const mcpFace = createMcpStdioFace(handlers, {
       input: process.stdin,
       output: process.stdout,
       serverInfo: { name: "mae-dts-flow", version: "0.1.0" },
     });
     mcpFace.start();
-    console.error("[mae-dts-flow] stdio MCP 面已启用");
+    console.error("[mae-dts-flow] stdio MCP 面已启用(四件套工具已注册)");
   }
 
   const shutdown = (): void => {
@@ -101,3 +87,30 @@ main().catch((error: unknown) => {
   console.error(`[mae-dts-flow] 启动失败: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(2);
 });
+
+async function textSelfInfo(service: DtsFlowService): Promise<{
+  content: Array<{ type: "text"; text: string }>;
+}> {
+  const summary = await service.configSummary();
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          {
+            server: "mae-dts-flow",
+            employeeId: summary.employeeId,
+            mock: summary.mock,
+            dataDir: summary.dataDir,
+            issuesRoot: summary.issuesRoot,
+            cloudBaseUrl: summary.cloudBaseUrl,
+            dtsGatewayConfigured: summary.dtsGatewayUrl !== null,
+            dtsTokenPresent: summary.dtsTokenPresent,
+          },
+          null,
+          2,
+        ),
+      },
+    ],
+  };
+}

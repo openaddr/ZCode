@@ -56,6 +56,29 @@ export {
   emptyStages,
 } from "./domain/ledger.js";
 export {
+  STAGE_REGISTRY,
+  type FlowToolName,
+  type StageSpec,
+  REPORT_SECTIONS,
+  type AnalysisGate,
+  answerAnalysisGate,
+  buildAnalysisReportTemplate,
+  buildMcpConfigJson,
+  buildOpeningBrief,
+  buildSkillMarkdown,
+  expectedBranch,
+  isToolAllowed,
+  raiseAnalysisGate,
+  validateAnalysisReport,
+} from "./domain/issueFlow.js";
+export {
+  type InitWorkspaceResult,
+  initIssueWorkspace,
+  readAnalysisReport,
+  workspaceDir,
+} from "./adapters/workspaceStore.js";
+export { buildFlowToolHandlers } from "./adapters/mcpTools.js";
+export {
   issueDir,
   appendIssueEvent,
   createIssueLedger,

@@ -85,8 +85,31 @@ async function handle(
       });
       return;
     }
+    case "POST /api/issues": {
+      const body = (await readJsonBody(request)) as { ticket?: string; interventionTier?: string };
+      if (typeof body.ticket !== "string" || !body.ticket.trim()) {
+        respondJson(response, 400, { error: "缺少 ticket" });
+        return;
+      }
+      const tier = body.interventionTier === "full_auto" || body.interventionTier === "report_first" ? body.interventionTier : undefined;
+      const detail = await service.getTicket(body.ticket).catch(() => null);
+      const created = await service.initIssue({ ticket: body.ticket, interventionTier: tier, detail });
+      respondJson(response, 201, {
+        ledger: created.ledger,
+        workspace: created.workspace,
+        openingBrief: created.openingBrief,
+      });
+      return;
+    }
     default:
       break;
+  }
+  const gateMatch = /^\/api\/issues\/([^/]+)\/analysis-gate$/.exec(url.pathname);
+  if (request.method === "POST" && gateMatch !== null) {
+    const body = (await readJsonBody(request)) as { confirm?: boolean };
+    const ledger = await service.confirmAnalysis({ ticket: decodeURIComponent(gateMatch[1] as string), confirm: body.confirm === true });
+    respondJson(response, 200, { stage: ledger.stage, gate: ledger.analysisGate });
+    return;
   }
   const ticketMatch = /^\/api\/dts\/tickets\/([^/]+)$/.exec(url.pathname);
   if (request.method === "GET" && ticketMatch !== null) {
@@ -103,6 +126,19 @@ async function handle(
     return;
   }
   respondJson(response, 404, { error: `未知路由: ${route}` });
+}
+
+async function readJsonBody(request: import("node:http").IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) {
+    chunks.push(chunk as Buffer);
+  }
+  if (chunks.length === 0) return {};
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+  } catch {
+    throw new Error("请求体不是合法 JSON");
+  }
 }
 
 function respondJson(response: import("node:http").ServerResponse, status: number, body: unknown): void {
