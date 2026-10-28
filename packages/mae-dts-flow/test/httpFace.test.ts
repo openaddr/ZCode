@@ -10,6 +10,7 @@ function buildService(dataDir: string): DtsFlowService {
   return createDtsFlowService(
     {
       dataDir,
+      issuesRoot: path.join(dataDir, "issues-ws"),
       binDir: path.join(dataDir, "bin"),
       employeeId: "ning",
       cloudBaseUrl: null,
@@ -18,7 +19,7 @@ function buildService(dataDir: string): DtsFlowService {
       httpPort: 0,
       mock: true,
     },
-    { fetch },
+    { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },
   );
 }
 
