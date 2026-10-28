@@ -18,6 +18,7 @@ function buildService(dataDir: string): DtsFlowService {
       dtsTokenPath: path.join(dataDir, "mcp-token"),
       httpPort: 0,
       mock: true,
+      pipelineBudgetMinutes: 60,
     },
     { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },
   );

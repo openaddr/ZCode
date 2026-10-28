@@ -19,6 +19,7 @@ function buildService(root: string): DtsFlowService {
       dtsTokenPath: path.join(root, "mcp-token"),
       httpPort: 0,
       mock: true,
+      pipelineBudgetMinutes: 60,
     },
     { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },
   );
@@ -100,7 +101,7 @@ describe("flow tools(MCP 面)", () => {
     expect(JSON.stringify(result.content)).toContain("submit_analysis");
   });
 
-  it("create_mr:mr_green 前门禁拒绝;阶段到位后 codehubcli 缺席 fail-loud", async () => {
+  it("create_mr:mr_green 前门禁拒绝;阶段到位后 mock 平台直接建单记账", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "mcp-tools-"));
     const service = buildService(root);
     await advanceToAnalyze(service, "DTS-2026-1010");
@@ -116,8 +117,10 @@ describe("flow tools(MCP 面)", () => {
     // 修复阶段走完(自报)才进 MR 验绿阶段。
     await service.completeStage({ ticket: "DTS-2026-1010", stage: "fix" });
     const late = await handlers.callTool("create_mr", { ticket: "DTS-2026-1010", repo: "https://x.git" });
-    expect(late.isError).toBe(true);
-    expect(JSON.stringify(late.content)).toContain("codehubcli");
+    expect(late.isError).toBeUndefined();
+    const ledger = await service.loadIssue("DTS-2026-1010");
+    expect(ledger.mrAccounts).toHaveLength(1);
+    expect(ledger.mrAccounts[0]?.branch).toBe("master_ning_DTS-2026-1010");
   });
 
   it("complete_stage(mr_green) 申报 MR 进台账", async () => {

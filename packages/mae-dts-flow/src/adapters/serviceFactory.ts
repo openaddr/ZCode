@@ -7,8 +7,8 @@ import {
 } from "../app/service.js";
 import type { DtsFlowConfig } from "../domain/config.js";
 import { isActionable } from "../domain/dts.js";
-import { DtsFlowDependencyError } from "../domain/depsProbe.js";
 import { probeDependency } from "../domain/depsProbe.js";
+import { judgeGate } from "../domain/mrGate.js";
 import {
   type IssueStageName,
   answerAnalysisGate,
@@ -33,6 +33,7 @@ import {
 } from "./ledgerStore.js";
 import { workspaceDir } from "./workspaceStore.js";
 import { fetchCloudModuleBindings, loadLocalModuleBindings, localBindingsPath } from "./moduleBindingsStore.js";
+import { type PlatformAdapter, createPlatformAdapter } from "./platformAdapter.js";
 import { initIssueWorkspace, readAnalysisReport } from "./workspaceStore.js";
 
 const STAGE_ORDER: readonly string[] = ["dts_info", "prep_repo", "analyze", "fix", "mr_green"];
@@ -50,6 +51,18 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
       );
     }
     return gateway;
+  };
+  let platform: PlatformAdapter | null = null;
+  const getPlatform = async (): Promise<PlatformAdapter> => {
+    if (platform === null) {
+      platform = await createPlatformAdapter({
+        dataDir: config.dataDir,
+        mock: config.mock,
+        binDir: config.binDir,
+        pathEnv: process.env["PATH"],
+      });
+    }
+    return platform;
   };
   const loadLedgerOrThrow = async (ticket: string): Promise<IssueLedger> => {
     return loadIssueLedger(config.dataDir, ticket).catch(() => {
@@ -209,23 +222,91 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
       }
       return updated;
     },
-    async createMr({ ticket, repo, title }) {
+    async createMr({ ticket, repo, title, description }) {
       const ledger = await loadLedgerOrThrow(ticket);
       if (!isToolAllowed(ledger.stage as IssueStageName, "create_mr")) {
         throw new IssueLedgerError(`create_mr 仅 MR 验绿阶段可用,当前阶段 ${ledger.stage}`);
       }
       const branch = expectedBranch(config.employeeId, ticket);
-      const resolved = await probeDependency("codehubcli", fsProbeOptions(config.binDir, process.env["PATH"], process.platform));
-      if (!resolved.available) {
-        throw new DtsFlowDependencyError(
-          `缺少依赖组件「codehubcli」:${config.binDir} 与 PATH 均未找到;MR 创建无法进行(部署随装)`,
-          "codehubcli",
-        );
+      const adapter = await getPlatform();
+      const created = await adapter.createMr({
+        repo,
+        branch,
+        title: title ?? `${ticket} 修复`,
+        description: description ?? "",
+        ticket,
+      });
+      ledger.mrAccounts.push({
+        repo: created.repo,
+        url: created.url,
+        branch: created.branch,
+        pipeline: "running",
+        updatedAt: now().toISOString(),
+      });
+      if (ledger.mrWatch === null) {
+        const started = now();
+        ledger.mrWatch = {
+          startedAt: started.toISOString(),
+          deadlineAt: new Date(started.getTime() + config.pipelineBudgetMinutes * 60_000).toISOString(),
+        };
       }
-      // 施工票 7 实装 codehubcli 直调与验绿监看;此处先锁分支契约,防误用。
-      throw new IssueLedgerError(
-        `create_mr 尚未实装(施工票 7);分支契约已核:${repo} 的源分支必须为 ${branch}${title ? `,标题「${title}」` : ""}`,
-      );
+      await saveIssueLedger(config.dataDir, ledger, now());
+      await appendIssueEvent(config.dataDir, ticket, {
+        ts: now().toISOString(),
+        kind: "mr_created",
+        payload: { repo: created.repo, url: created.url, branch: created.branch },
+      });
+      return { branch, status: "created" };
+    },
+    async pollTickets() {
+      const results: Array<{ ticket: string; verdict: "green" | "red" | "running" | "exhausted" | "skipped" }> = [];
+      for (const ledger of await listIssueLedgers(config.dataDir)) {
+        if (ledger.closedAt !== null || ledger.mrAccounts.length === 0) {
+          results.push({ ticket: ledger.ticket, verdict: "skipped" });
+          continue;
+        }
+        const adapter = await getPlatform();
+        for (const account of ledger.mrAccounts) {
+          if (account.pipeline === "green" || account.pipeline === "red") continue;
+          try {
+            account.pipeline = await adapter.pipelineStatus(account.url);
+          } catch (error) {
+            await appendIssueEvent(config.dataDir, ledger.ticket, {
+              ts: now().toISOString(),
+              kind: "pipeline_probe_failed",
+              payload: { url: account.url, error: error instanceof Error ? error.message : String(error) },
+            });
+          }
+          account.updatedAt = now().toISOString();
+        }
+        const verdict = judgeGate(ledger.mrAccounts, ledger.mrDeclarations, ledger.mrWatch, now());
+        await saveIssueLedger(config.dataDir, ledger, now());
+        await appendIssueEvent(config.dataDir, ledger.ticket, {
+          ts: now().toISOString(),
+          kind: `mr_gate_${verdict.state}`,
+          payload: {
+            failures: verdict.failures,
+            missing: verdict.declaration.missing.map((item) => item.repo),
+            extra: verdict.declaration.extra.map((account) => account.repo),
+          },
+        });
+        if (verdict.state === "green") {
+          ledger.closedAt = now().toISOString();
+          await saveIssueLedger(config.dataDir, ledger, now());
+        }
+        results.push({ ticket: ledger.ticket, verdict: verdict.state });
+      }
+      return results;
+    },
+    async archiveIssue(ticket) {
+      const ledger = await loadLedgerOrThrow(ticket);
+      if (ledger.closedAt === null) {
+        throw new IssueLedgerError(`单 ${ticket} 未经验绿收口,不能归档`);
+      }
+      ledger.archived = true;
+      await saveIssueLedger(config.dataDir, ledger, now());
+      await appendIssueEvent(config.dataDir, ticket, { ts: now().toISOString(), kind: "archived", payload: {} });
+      return ledger;
     },
     async listIssues() {
       return listIssueLedgers(config.dataDir);

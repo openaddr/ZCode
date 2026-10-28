@@ -26,8 +26,18 @@ export interface IssueLedger {
     askedAt: string;
     answeredAt: string | null;
   } | null;
-  /** MR 申报账(create_mr 记账 + complete_stage 申报;验绿门数据源)。 */
+  /** MR 申报账(complete_stage 申报;对拍基准)。 */
   mrDeclarations: Array<{ repo: string; url: string; declaredAt: string }>;
+  /** create_mr 记账(验绿门证据源)。 */
+  mrAccounts: Array<{
+    repo: string;
+    url: string;
+    branch: string;
+    pipeline: "unknown" | "running" | "green" | "red";
+    updatedAt: string;
+  }>;
+  /** 流水线监看预算(首次 create_mr 起;耗尽停表转人工)。 */
+  mrWatch: { startedAt: string; deadlineAt: string } | null;
   /** 流程终点:全部 MR 流水线跑绿并收口。 */
   closedAt: string | null;
   archived: boolean;

@@ -104,6 +104,15 @@ async function handle(
     default:
       break;
   }
+  const archiveMatch = /^\/api\/issues\/([^/]+)\/archive$/.exec(url.pathname);
+  if (request.method === "POST" && archiveMatch !== null) {
+    respondJson(response, 200, await service.archiveIssue(decodeURIComponent(archiveMatch[1] as string)));
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/poll") {
+    respondJson(response, 200, { results: await service.pollTickets() });
+    return;
+  }
   const gateMatch = /^\/api\/issues\/([^/]+)\/analysis-gate$/.exec(url.pathname);
   if (request.method === "POST" && gateMatch !== null) {
     const body = (await readJsonBody(request)) as { confirm?: boolean };

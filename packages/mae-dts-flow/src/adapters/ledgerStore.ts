@@ -41,6 +41,8 @@ export async function createIssueLedger(
     rounds: 0,
     analysisGate: null,
     mrDeclarations: [],
+    mrAccounts: [],
+    mrWatch: null,
     closedAt: null,
     archived: false,
     createdAt: now,
