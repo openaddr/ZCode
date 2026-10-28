@@ -15,6 +15,8 @@ export const DEFAULT_INTERVENTION_TIER: InterventionTier = "align_first";
 /** 单条问题会话的阶段台账。落在服务数据目录 issues/<单号>/ledger.json,Agent 推不动。 */
 export interface IssueLedger {
   ticket: string;
+  /** 发起时选定的业务模块(#41 弹窗;未选为 null)。 */
+  moduleName: string | null;
   interventionTier: InterventionTier;
   stage: IssueStage;
   stages: Record<IssueStage, StageStatus>;

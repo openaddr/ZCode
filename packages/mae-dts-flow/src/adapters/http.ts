@@ -92,14 +92,19 @@ async function handle(
       return;
     }
     case "POST /api/issues": {
-      const body = (await readJsonBody(request)) as { ticket?: string; interventionTier?: string };
+      const body = (await readJsonBody(request)) as { ticket?: string; module?: string; interventionTier?: string };
       if (typeof body.ticket !== "string" || !body.ticket.trim()) {
         respondJson(response, 400, { error: "缺少 ticket" });
         return;
       }
       const tier = body.interventionTier === "full_auto" || body.interventionTier === "report_first" ? body.interventionTier : undefined;
       const detail = await service.getTicket(body.ticket).catch(() => null);
-      const created = await service.initIssue({ ticket: body.ticket, interventionTier: tier, detail });
+      const created = await service.initIssue({
+        ticket: body.ticket,
+        moduleName: typeof body.module === "string" && body.module ? body.module : null,
+        interventionTier: tier,
+        detail,
+      });
       respondJson(response, 201, {
         ledger: created.ledger,
         workspace: created.workspace,
