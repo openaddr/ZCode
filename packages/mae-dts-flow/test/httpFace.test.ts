@@ -44,6 +44,24 @@ describe("http face", () => {
 
       const issues = (await (await fetch(`${base}/api/issues`)).json()) as { issues: Array<{ ticket: string }> };
       expect(issues.issues.map((issue) => issue.ticket)).toEqual(["DTS-2026-1001"]);
+
+      const dtsList = (await (await fetch(`${base}/api/dts/tickets`)).json()) as {
+        mock: boolean;
+        total: number;
+        actionableCount: number;
+        tickets: Array<{ ticket: string; actionable: boolean }>;
+      };
+      expect(dtsList.mock).toBe(true);
+      expect(dtsList.total).toBe(10);
+      expect(dtsList.actionableCount).toBe(5);
+      expect(dtsList.tickets.every((ticket) => ticket.actionable)).toBe(true);
+
+      const detail = (await (await fetch(`${base}/api/dts/tickets/DTS-2026-1008`)).json()) as {
+        ticket: string;
+        severity: string;
+      };
+      expect(detail.ticket).toBe("DTS-2026-1008");
+      expect(detail.severity).toBe("致命");
     } finally {
       await face.close();
     }
