@@ -120,7 +120,12 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
       return createIssueLedger(config.dataDir, { ...input, now });
     },
     async initIssue(input) {
-      const ledger = await createIssueLedger(config.dataDir, { ticket: input.ticket, interventionTier: input.interventionTier, now });
+      const ledger = await createIssueLedger(config.dataDir, {
+        ticket: input.ticket,
+        moduleName: input.moduleName ?? null,
+        interventionTier: input.interventionTier,
+        now,
+      });
       const workspace = await initIssueWorkspace({
         issuesRoot: config.issuesRoot,
         ticket: input.ticket,
@@ -142,7 +147,7 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
       await appendIssueEvent(config.dataDir, input.ticket, {
         ts: now().toISOString(),
         kind: "workspace_initialized",
-        payload: { workspacePath: workspace.workspacePath },
+        payload: { workspacePath: workspace.workspacePath, moduleName: ledger.moduleName },
       });
       return { ledger, workspace, openingBrief };
     },

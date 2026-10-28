@@ -204,7 +204,8 @@ export interface GitChangeSummary {
   removed: number;
 }
 
-export type WorkspaceMainView = "chat" | "automations" | "plugin-store";
+// mae: DTS 列表主视图页签(specs/mae/dts-flow.md,#41)
+export type WorkspaceMainView = "chat" | "automations" | "plugin-store" | "dts";
 
 export interface WorkspaceShellLayoutProps extends Omit<AppProps, "baseFeedbackService"> {
   workspaceReadOnlyReason?: string;

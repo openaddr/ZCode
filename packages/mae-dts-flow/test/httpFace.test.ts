@@ -83,6 +83,18 @@ describe("http face", () => {
 
       const notFound = await fetch(`${base}/api/unknown`);
       expect(notFound.status).toBe(404);
+
+      // 发起(POST):模块/档位进台账。
+      const started = await fetch(`${base}/api/issues`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ticket: "DTS-2026-1004", module: "报表中心", interventionTier: "report_first" }),
+      });
+      expect(started.status).toBe(201);
+      const startedBody = (await started.json()) as { ledger: { moduleName: string | null; interventionTier: string }; workspace: { workspacePath: string } };
+      expect(startedBody.ledger.moduleName).toBe("报表中心");
+      expect(startedBody.ledger.interventionTier).toBe("report_first");
+      expect(startedBody.workspace.workspacePath).toContain("DTS-2026-1004");
     } finally {
       await face.close();
     }

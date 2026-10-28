@@ -23,7 +23,7 @@ export function issueDir(dataDir: string, ticket: string): string {
 
 export async function createIssueLedger(
   dataDir: string,
-  input: { ticket: string; interventionTier?: InterventionTier; now?: () => Date },
+  input: { ticket: string; moduleName?: string | null; interventionTier?: InterventionTier; now?: () => Date },
 ): Promise<IssueLedger> {
   const now = (input.now ?? (() => new Date()))().toISOString();
   const dir = issueDir(dataDir, input.ticket);
@@ -35,6 +35,7 @@ export async function createIssueLedger(
   await fs.mkdir(dir, { recursive: true });
   const ledger: IssueLedger = {
     ticket: input.ticket,
+    moduleName: input.moduleName ?? null,
     interventionTier: input.interventionTier ?? DEFAULT_INTERVENTION_TIER,
     stage: "dts_info",
     stages: emptyStages(),
