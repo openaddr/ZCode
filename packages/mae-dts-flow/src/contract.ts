@@ -56,6 +56,25 @@ export {
   emptyStages,
 } from "./domain/ledger.js";
 export {
+  type GateVerdict,
+  type MrAccount,
+  type MrDeclaration,
+  type PipelineState,
+  type WatchBudget,
+  isBudgetExhausted,
+  judgeGate,
+  verifyDeclarations,
+} from "./domain/mrGate.js";
+export {
+  DEFAULT_COMMANDS,
+  type PlatformCommands,
+  type PlatformAdapter,
+  PlatformError,
+  CliPlatformAdapter,
+  MockPlatformAdapter,
+  createPlatformAdapter,
+} from "./adapters/platformAdapter.js";
+export {
   STAGE_REGISTRY,
   type FlowToolName,
   type StageSpec,
