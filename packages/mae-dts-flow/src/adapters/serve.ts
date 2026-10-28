@@ -75,8 +75,16 @@ async function main(): Promise<void> {
     console.error("[mae-dts-flow] stdio MCP 面已启用(四件套工具已注册)");
   }
 
+  const pollTimer = setInterval(() => {
+    void service.pollTickets().catch((error: unknown) => {
+      console.error(`[mae-dts-flow] 轮询失败: ${error instanceof Error ? error.message : String(error)}`);
+    });
+  }, 60_000);
+  pollTimer.unref?.();
+
   const shutdown = (): void => {
     console.error("[mae-dts-flow] 收到退出信号,关闭 HTTP 面");
+    clearInterval(pollTimer);
     void face.close().then(() => process.exit(0));
   };
   process.once("SIGINT", shutdown);

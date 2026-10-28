@@ -19,6 +19,8 @@ export interface DtsFlowConfig {
   httpPort: number;
   /** mock 模式:罐头单据,外网开发/演示用。 */
   mock: boolean;
+  /** 流水线监看预算(分钟),耗尽停表转人工。 */
+  pipelineBudgetMinutes: number;
 }
 
 export class DtsFlowConfigError extends Error {}
@@ -74,6 +76,7 @@ export function assembleConfig(input: AssembleConfigInput): DtsFlowConfig {
     dtsTokenPath: pickString(fileValues, "dtsTokenPath") ?? joinPath(dataDir, "mcp-token"),
     httpPort: pickPort(fileValues),
     mock,
+    pipelineBudgetMinutes: pickBudgetMinutes(fileValues),
   };
 }
 
@@ -96,6 +99,15 @@ function assertHttpUrlIfPresent(value: string | null, field: string): string | n
     throw new DtsFlowConfigError(`${field} 只允许 http/https: ${value}`);
   }
   return value.replace(/\/+$/, "");
+}
+
+function pickBudgetMinutes(fileValues: Record<string, unknown>): number {
+  const value = fileValues["pipelineBudgetMinutes"];
+  if (value === undefined || value === null) return 60;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+    throw new DtsFlowConfigError(`配置字段 pipelineBudgetMinutes 必须是正整数,得到 ${String(value)}`);
+  }
+  return value;
 }
 
 function pickPort(fileValues: Record<string, unknown>): number {

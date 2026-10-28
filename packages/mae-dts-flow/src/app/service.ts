@@ -59,6 +59,10 @@ export interface DtsFlowService {
     mrs?: Array<{ repo: string; url: string }>;
   }): Promise<IssueLedger>;
   createMr(input: { ticket: string; repo: string; title?: string; description?: string }): Promise<{ branch: string; status: string }>;
+  /** 验绿门轮询:逐 MR 查流水线,三态裁决;绿→收口,红/少报多报→事件回发,预算尽→停表转人工。 */
+  pollTickets(): Promise<Array<{ ticket: string; verdict: "green" | "red" | "running" | "exhausted" | "skipped" }>>;
+  /** 归档:仅 closedAt 在场(验绿收口)后允许。 */
+  archiveIssue(ticket: string): Promise<IssueLedger>;
   listIssues(): Promise<IssueLedger[]>;
   loadIssue(ticket: string): Promise<IssueLedger>;
   issueEvents(ticket: string, tail?: number): Promise<IssueEvent[]>;
