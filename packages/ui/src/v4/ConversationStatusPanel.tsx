@@ -56,6 +56,7 @@ import { cn } from "@/components/lib/utils.js";
 import { Button } from "@/components/ui/button.js";
 import { RUN_STATUS_DOT } from "@/components/workflow-graph/run-status-presentation.js";
 import { WorkflowRunRail } from "@/components/workflow-run-line/WorkflowRunRail.js";
+import { DtsStageSection } from "@/mae/dts/DtsStageSection.js";
 import { foldWorkflowRunRail } from "@/lib/workflowRunLine.js";
 import { useNowTicker } from "@/components/workflow-graph/use-now-ticker.js";
 import {
@@ -2120,6 +2121,8 @@ function ConversationStatusPanelImpl({
                 useVerticalFloatingPanels={useVerticalFloatingPanels}
               />
             ) : null}
+            {/* mae: DTS 问题会话「处理阶段」块(specs/mae/dts-flow.md #41)——非问题会话自渲染为 null */}
+            <DtsStageSection workspacePath={workspacePath} separated={canRenderGit} />
             {canRenderGoal ? (
               <GoalStatusSection
                 model={model}
