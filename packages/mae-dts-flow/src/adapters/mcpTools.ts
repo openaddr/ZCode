@@ -75,8 +75,8 @@ export function buildFlowToolHandlers(service: DtsFlowService): McpFaceHandlers 
       if (!ticket.trim()) return errorResult(new Error("缺少 ticket 参数"));
       try {
         return textResult(await service.getTicket(ticket));
-      } catch (error) {
-        return errorResult(error);
+      } catch {
+        return errorResult(new Error(`查无此单或网关不可达: ${ticket}`));
       }
     }
     const ticket = String(args["ticket"] ?? "");
@@ -84,7 +84,7 @@ export function buildFlowToolHandlers(service: DtsFlowService): McpFaceHandlers 
     let ledger;
     try {
       ledger = await service.loadIssue(ticket);
-    } catch (error) {
+    } catch {
       return errorResult(new Error(`单 ${ticket} 的台账不存在:先由发起动作创建问题会话`));
     }
     if (name !== "complete_stage" && !isToolAllowed(ledger.stage, name as FlowToolName)) {

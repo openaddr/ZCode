@@ -31,10 +31,9 @@ import {
   recordStage,
   saveIssueLedger,
 } from "./ledgerStore.js";
-import { workspaceDir } from "./workspaceStore.js";
 import { fetchCloudModuleBindings, loadLocalModuleBindings, localBindingsPath } from "./moduleBindingsStore.js";
 import { type PlatformAdapter, createPlatformAdapter } from "./platformAdapter.js";
-import { initIssueWorkspace, readAnalysisReport } from "./workspaceStore.js";
+import { initIssueWorkspace, readAnalysisReport, workspaceDir } from "./workspaceStore.js";
 
 const STAGE_ORDER: readonly string[] = ["dts_info", "prep_repo", "analyze", "fix", "mr_green"];
 
@@ -309,7 +308,8 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
       return ledger;
     },
     async listIssues() {
-      return listIssueLedgers(config.dataDir);
+      const ledgers = await listIssueLedgers(config.dataDir);
+      return ledgers.map((ledger) => ({ ...ledger, workspacePath: workspaceDir(config.issuesRoot, ledger.ticket) }));
     },
     async loadIssue(ticket: string) {
       return loadLedgerOrThrow(ticket);
