@@ -62,6 +62,8 @@ import { TaskFindDialog } from "@/quickpick/TaskFindDialog.js";
 import { WebRemoteControlMobileShell } from "@/WebRemoteControlMobileShell.js";
 import { resolveTopOverlayLeadingPaddingClass, WorkspaceHeader } from "@/WorkspaceHeader.js";
 import { WorkspaceSidebar, type SidebarFileTreeOpenRequest } from "@/WorkspaceSidebar.js";
+// mae: DTS 列表主视图页签(specs/mae/dts-flow.md #41)
+import { DtsListPage } from "@/mae/dts/DtsListPage.js";
 import { AnimatedSidePanePanel } from "@/app-shell/AnimatedSidePanePanel.js";
 import {
   findScreenshotSurfaceTabForRender,
@@ -1198,9 +1200,14 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
   const showChatMainView = useCallback(() => {
     onWorkspaceMainViewChange("chat");
   }, [onWorkspaceMainViewChange]);
+  // mae: DTS 列表页签(specs/mae/dts-flow.md #41)
+  const handleOpenDtsList = useCallback(() => {
+    onWorkspaceMainViewChange("dts");
+  }, [onWorkspaceMainViewChange]);
   const primaryNavigationBack =
-    workspaceMainView === "plugin-store" ? showChatMainView : handleTaskNavBack;
-  const canPrimaryNavigationBack = workspaceMainView === "plugin-store" || canTaskNavBack;
+    workspaceMainView === "plugin-store" || workspaceMainView === "dts" ? showChatMainView : handleTaskNavBack;
+  const canPrimaryNavigationBack =
+    workspaceMainView === "plugin-store" || workspaceMainView === "dts" || canTaskNavBack;
   useEffect(() => {
     if (
       isWebRemoteControlShell &&
@@ -1991,6 +1998,9 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
       automationsActive={workspaceMainView === "automations"}
       onOpenPluginStore={handleOpenPluginStore}
       pluginStoreActive={workspaceMainView === "plugin-store"}
+      // mae: DTS 列表页签入口
+      onOpenDtsList={handleOpenDtsList}
+      dtsListActive={workspaceMainView === "dts"}
       // 桌面没有 mobile 导航动作；内联包装曾让右侧开关穿透侧栏 memo，重复渲染全部项目。
       onWebRemoteTaskOpen={
         mobile
@@ -2142,6 +2152,19 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
                     </div>
                   </ScopedErrorBoundary>
                 </div>
+              </AutomationsMainBreadcrumbFrame>
+            </main>
+          ) : workspaceMainView === "dts" && !isWebRemoteControlShell ? (
+            // mae: DTS 列表主视图(specs/mae/dts-flow.md;手机远控分支不插,mae 禁远控 D7)
+            <main className="flex h-full min-h-0 flex-1 flex-col bg-background">
+              <AutomationsMainBreadcrumbFrame
+                isDesktop={Boolean(isDesktop)}
+                sectionLabel={intl.formatMessage({ id: "workspace.openDtsList" })}
+              >
+                <DtsListPage
+                  onIssueStarted={handleCreateDtsIssueSession}
+                  onSwitchToChat={showChatMainView}
+                />
               </AutomationsMainBreadcrumbFrame>
             </main>
           ) : workspaceMainView === "plugin-store" && !isWebRemoteControlShell ? (
