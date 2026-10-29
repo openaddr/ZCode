@@ -128,3 +128,4 @@
 | 2026-10-26 | `packages/mae-dts-flow/`(新增独立包:@mae/dts-flow,managed 模块,domain/app/adapters 三层) | 定制模块 | 施工票 1/7(#45):服务骨架(HTTP+stdio MCP 双面)、配置体系(云端地址/DTS 网关/工号/依赖目录)、阶段台账(原子写+事件流)、模块绑定两层(云端拉取为主/本地兜底)、依赖探测 fail-loud;22 单测;契约见包内 CONTRACT.md |
 | 2026-10-26 | `architecture-policy.yaml`(改,+8 行,`# mae:`) | 治理登记 | 登记新 managed 模块 mae-dts-flow(零内部依赖,layerOrder domain→app→adapters) |
 | 2026-10-26 | 根 `package.json`(改,typecheck 脚本 +1 项目;JSON 无法注释,以此登记为准) | 验证登记 | `tsc -b` 清单纳入 packages/mae-dts-flow,根 typecheck 覆盖新包 |
+| 2026-10-29 | `packages/desktop/scripts/build-metadata.mjs`(+7 行,`// mae:`)+ `scripts/mae/calver.mjs`(语义所有者新增 resolveBuildCalVer)+ calver.test(+4 用例)+ specs/mae/versioning-branding.md(构建版本按日期条目) | 薄挂接/规格 | 构建版本按当日日期 CalVer(D13):appVersion=resolveBuildCalVer(当日段+PATCH 保留/归 0);官方身份显式授权时保持上游原语义;发布语义仍走 pnpm release |

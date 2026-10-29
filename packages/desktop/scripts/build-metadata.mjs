@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 // mae: 上游基线元数据(upstreamBase/upstreamBaseCommit)——specs/mae/versioning-branding.md #11
 import { resolveUpstreamBase } from "./mae-upstream-base.mjs";
+import { resolveBuildCalVer } from "../../../scripts/mae/calver.mjs";
 
 const require = createRequire(import.meta.url);
 const moduleDir = import.meta.dirname;
@@ -86,7 +87,12 @@ export function collectBuildMetadata() {
   const desktopPackageJson = readJson(resolve(desktopDir, "package.json"));
 
   return {
-    appVersion: normalizeVersion(rootPackageJson.version),
+    // mae: 构建版本按当日日期 CalVer(D13);ZCODE_ALLOW_OFFICIAL_IDENTITY=1 保持上游原语义
+    appVersion: normalizeVersion(
+      process.env.ZCODE_ALLOW_OFFICIAL_IDENTITY === "1"
+        ? rootPackageJson.version
+        : resolveBuildCalVer(rootPackageJson.version, new Date()),
+    ),
     minCompatibleVersion: normalizeVersion(
       rootPackageJson.zcodeCompatibility?.minCompatibleVersion ?? rootPackageJson.version,
     ),
