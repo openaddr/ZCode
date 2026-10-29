@@ -4,6 +4,7 @@ import {
   formatCalVerDate,
   isCalVer,
   nextCalVer,
+  resolveBuildCalVer,
   resolveReleaseVersion,
 } from "./calver.mjs";
 
@@ -106,5 +107,23 @@ describe("resolveReleaseVersion", () => {
         now: new Date("2026-10-22T08:00:00Z"),
       }),
     ).not.toThrow();
+  });
+});
+
+describe("resolveBuildCalVer(构建期版本,D13)", () => {
+  it("跨日构建:PATCH 归 0,日期段取构建当日(UTC)", () => {
+    expect(resolveBuildCalVer("2026.1023.2", new Date("2026-10-29T08:00:00Z"))).toBe("2026.1029.0");
+  });
+
+  it("同日构建:保留当前 PATCH(产物覆盖语义)", () => {
+    expect(resolveBuildCalVer("2026.1029.2", new Date("2026-10-29T23:00:00Z"))).toBe("2026.1029.2");
+  });
+
+  it("当前版本非 CalVer(如上游语义化版本):当日 0 起步", () => {
+    expect(resolveBuildCalVer("3.16.2", new Date("2026-10-29T08:00:00Z"))).toBe("2026.1029.0");
+  });
+
+  it("月末跨月边界:日期段按真实日历", () => {
+    expect(resolveBuildCalVer("2026.1031.5", new Date("2026-11-01T00:30:00Z"))).toBe("2026.1101.0");
   });
 });
