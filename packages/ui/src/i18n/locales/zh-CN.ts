@@ -5911,6 +5911,7 @@ const zhCN: Record<string, string> = {
   "automations.pageTab.ariaLabel": "自动化页面",
   // mae: DTS 问题会话分组
   "mae.dts.issueSessions": "问题会话",
+  "mae.dts.issue.done": "已收口",
   // mae: DTS 列表页签
   "workspace.openDtsList": "DTS列表",
   "mae.dts.list.title": "DTS 列表",

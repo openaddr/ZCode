@@ -6263,6 +6263,7 @@ const enUS: Record<string, string> = {
   "automations.pageTab.ariaLabel": "Automations page",
   // mae: DTS issue sessions group
   "mae.dts.issueSessions": "Issue sessions",
+  "mae.dts.issue.done": "Closed",
   // mae: DTS list tab
   "workspace.openDtsList": "DTS list",
   "mae.dts.list.title": "DTS list",
