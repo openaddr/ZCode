@@ -70,6 +70,20 @@ export function nextCalVer(currentVersion, date = new Date()) {
 }
 
 /**
+ * 构建期版本决策(electron-builder metadata 用,D13):
+ * - 版本日期段取构建当日(YYYY.MMDD,UTC);当前版本与今日同日 → 保留其 PATCH,跨日 → PATCH 归 0;
+ * - 当前版本非 CalVer(如上游语义化版本)→ 当日 `YYYY.MMDD.0` 起步;
+ * - 同日多次构建同版本号属预期(产物互相覆盖,发布语义仍走 resolveReleaseVersion)。
+ */
+export function resolveBuildCalVer(currentVersion, date = new Date()) {
+  const today = formatCalVerDate(date);
+  const current = parseCalVer(currentVersion);
+  const sameDay =
+    current !== null && `${current[0]}.${String(current[1]).padStart(4, "0")}` === today;
+  return `${today}.${sameDay ? current[2] : 0}`;
+}
+
+/**
  * 发布版本决策(release-calver 包装脚本用):
  * - 参数里首个非 flag 项 = 显式版本,必须是合法 CalVer(防止退回语义化 bump);
  * - 否则按 `nextCalVer(当前版本, 今日)` 计算(同日多发 PATCH 递增)。
