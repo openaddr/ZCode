@@ -14,8 +14,6 @@ function buildService(dataDir: string): DtsFlowService {
       binDir: path.join(dataDir, "bin"),
       employeeId: "ning",
       cloudBaseUrl: null,
-      dtsGatewayUrl: null,
-      dtsTokenPath: path.join(dataDir, "mcp-token"),
       httpPort: 0,
       mock: true,
       pipelineBudgetMinutes: 60,
@@ -64,6 +62,22 @@ describe("http face", () => {
       };
       expect(detail.ticket).toBe("DTS-2026-1008");
       expect(detail.severity).toBe("致命");
+
+      const modules = (await (await fetch(`${base}/api/modules`)).json()) as {
+        modules: Array<{ id: string; name: string; repositories: string[] }>;
+      };
+      expect(modules.modules.length).toBeGreaterThan(0);
+      expect(modules.modules[0]).toHaveProperty("id");
+      expect(modules.modules[0]).toHaveProperty("repositories");
+
+      const bindings = (await (await fetch(`${base}/api/dts/bindings`)).json()) as { bindings: Record<string, { moduleId: string }> };
+      expect(bindings.bindings["DTS-2026-1004"]?.moduleId).toBe("module-bigdata");
+
+      const people = (await (await fetch(`${base}/api/dts/people`)).json()) as { people: Array<{ username: string }> };
+      expect(people.people.some((person) => person.username === "dev")).toBe(true);
+
+      const ownerList = (await (await fetch(`${base}/api/dts/tickets?owner=zhangsan`)).json()) as { total: number };
+      expect(ownerList.total).toBe(10);
     } finally {
       await face.close();
     }

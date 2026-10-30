@@ -1,5 +1,3 @@
-import { stat } from "node:fs/promises";
-
 import {
   type DtsFlowService,
   type DtsFlowServiceDeps,
@@ -19,8 +17,7 @@ import {
   validateAnalysisReport,
 } from "../domain/issueFlow.js";
 import { type IssueLedger, IssueLedgerError } from "../domain/ledger.js";
-import { type ResolvedModuleBindings, resolveModuleBindings } from "../domain/moduleBindings.js";
-import { type DtsGateway, createDtsGateway, tokenFileReader } from "./dtsGateway.js";
+import { type DtsGateway, createDtsGateway } from "./dtsGateway.js";
 import { fsProbeOptions } from "./fsProbe.js";
 import {
   appendIssueEvent,
@@ -31,7 +28,6 @@ import {
   recordStage,
   saveIssueLedger,
 } from "./ledgerStore.js";
-import { fetchCloudModuleBindings, loadLocalModuleBindings, localBindingsPath } from "./moduleBindingsStore.js";
 import { type PlatformAdapter, createPlatformAdapter } from "./platformAdapter.js";
 import { initIssueWorkspace, readAnalysisReport, workspaceDir } from "./workspaceStore.js";
 
@@ -40,13 +36,12 @@ const STAGE_ORDER: readonly string[] = ["dts_info", "prep_repo", "analyze", "fix
 /** 服务工厂(adapters 组合根):把 domain 纯逻辑与 IO 实现接成 DtsFlowService 实例。 */
 export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowServiceDeps): DtsFlowService {
   const now = deps.now ?? (() => new Date());
-  let cachedBindings: ResolvedModuleBindings | null = null;
   let gateway: DtsGateway | null = null;
   const getGateway = (): DtsGateway => {
     if (gateway === null) {
       gateway = createDtsGateway(
-        { dtsGatewayUrl: config.dtsGatewayUrl, dtsTokenPath: config.dtsTokenPath, mock: config.mock },
-        { fetch: deps.fetch, readToken: tokenFileReader(config.dtsTokenPath) },
+        { cloudBaseUrl: config.cloudBaseUrl, mock: config.mock },
+        { fetch: deps.fetch },
       );
     }
     return gateway;
@@ -72,18 +67,12 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
   return {
     config,
     async configSummary() {
-      const tokenPresent = await stat(config.dtsTokenPath)
-        .then(() => true)
-        .catch(() => false);
       return {
         dataDir: config.dataDir,
         issuesRoot: config.issuesRoot,
         binDir: config.binDir,
         employeeId: config.employeeId,
         cloudBaseUrl: config.cloudBaseUrl,
-        dtsGatewayUrl: config.dtsGatewayUrl,
-        dtsTokenPath: config.dtsTokenPath,
-        dtsTokenPresent: tokenPresent,
         httpPort: config.httpPort,
         mock: config.mock,
       };
@@ -95,26 +84,24 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
         ),
       );
     },
-    async refreshModuleBindings() {
-      cachedBindings = await resolveModuleBindings({
-        cloud:
-          config.cloudBaseUrl === null
-            ? null
-            : () => fetchCloudModuleBindings(config.cloudBaseUrl as string, { fetch: deps.fetch, now }),
-        local: () => loadLocalModuleBindings(config.dataDir, { now }),
-        localHintPath: localBindingsPath(config.dataDir),
-      });
-      return cachedBindings;
-    },
-    getCachedModuleBindings() {
-      return cachedBindings;
-    },
-    async listTickets() {
-      const tickets = await getGateway().listByOwner(config.employeeId);
+    async listTickets(owner) {
+      const tickets = await getGateway().listByOwner(owner ?? config.employeeId);
       return tickets.map((ticket) => ({ ...ticket, actionable: isActionable(ticket.status) }));
     },
     async getTicket(ticket: string) {
-      return getGateway().getTicket(config.employeeId, ticket);
+      return getGateway().getTicket(ticket);
+    },
+    async listModules() {
+      return getGateway().listModules();
+    },
+    async getBindings() {
+      return getGateway().getBindings();
+    },
+    async putBinding(input) {
+      await getGateway().putBinding(input.ticket, input.moduleId, config.employeeId);
+    },
+    async listPeople() {
+      return getGateway().listPeople();
     },
     async createIssue(input) {
       return createIssueLedger(config.dataDir, { ...input, now });
@@ -134,7 +121,7 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
         selfCommand: deps.selfLauncher.command,
         selfArgs: deps.selfLauncher.args,
       });
-      const detail = input.detail ?? (await getGateway().getTicket(config.employeeId, input.ticket));
+      const detail = input.detail ?? (await getGateway().getTicket(input.ticket));
       const openingBrief = buildOpeningBrief({
         ticket: input.ticket,
         title: detail.title,
