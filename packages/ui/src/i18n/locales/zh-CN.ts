@@ -5916,6 +5916,7 @@ const zhCN: Record<string, string> = {
   "workspace.openDtsList": "DTS列表",
   "mae.dts.list.title": "DTS 列表",
   "mae.dts.list.subtitle": "拉取名下处于可实施状态的问题单;发起后每单一个独立工作流。",
+  "mae.dts.list.breadcrumbLabel": "DTS 列表路径",
   "mae.dts.list.mockBanner": "DEV 模拟 DTS:单据为本地 mock 数据,流程与真实模式完全一致。",
   "mae.dts.list.search": "搜索单号、标题…",
   "mae.dts.list.refresh": "刷新",

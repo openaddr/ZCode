@@ -29,7 +29,7 @@ const LEDGER_WAITING = {
 
 it.each(["zh-CN", "en-US"])("阶段条投影+闸确认按钮 POST: %s", async (locale) => {
   mock.locale = locale;
-  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
     if (String(input).endsWith("/api/issues/DTS-2026-1008"))
       return new Response(JSON.stringify(LEDGER_WAITING), { status: 200 });
     if (String(input).endsWith("/analysis-gate"))

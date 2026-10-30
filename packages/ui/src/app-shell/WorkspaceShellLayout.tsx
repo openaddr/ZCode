@@ -2154,19 +2154,6 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
                 </div>
               </AutomationsMainBreadcrumbFrame>
             </main>
-          ) : workspaceMainView === "dts" && !isWebRemoteControlShell ? (
-            // mae: DTS 列表主视图(specs/mae/dts-flow.md;手机远控分支不插,mae 禁远控 D7)
-            <main className="flex h-full min-h-0 flex-1 flex-col bg-background">
-              <AutomationsMainBreadcrumbFrame
-                isDesktop={Boolean(isDesktop)}
-                sectionLabel={intl.formatMessage({ id: "workspace.openDtsList" })}
-              >
-                <DtsListPage
-                  onIssueStarted={handleCreateDtsIssueSession}
-                  onSwitchToChat={showChatMainView}
-                />
-              </AutomationsMainBreadcrumbFrame>
-            </main>
           ) : workspaceMainView === "plugin-store" && !isWebRemoteControlShell ? (
             <main className="flex h-full min-h-0 flex-1 flex-col bg-background">
               <AutomationsMainBreadcrumbFrame
@@ -2610,6 +2597,22 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
                                   </div>
                                 </ScopedErrorBoundary>
                               </div>
+                            </AutomationsMainBreadcrumbFrame>
+                          </main>
+                        ) : workspaceMainView === "dts" && !isWebRemoteControlShell ? (
+                          // mae: DTS 列表主视图(specs/mae/dts-flow.md)。必须插在桌面 wideContent 这份
+                          // 视图链里;renderRemoteShell 的 chatContent 拷贝不插(mae 禁远控 D7)——
+                          // #55 实锤插错拷贝:state 变 dts 但桌面仍渲染聊天兜底。
+                          <main className="flex h-full min-h-0 flex-1 flex-col bg-background">
+                            <AutomationsMainBreadcrumbFrame
+                              isDesktop={Boolean(isDesktop)}
+                              sectionLabel={intl.formatMessage({ id: "workspace.openDtsList" })}
+                              ariaLabel={intl.formatMessage({ id: "mae.dts.list.breadcrumbLabel" })}
+                            >
+                              <DtsListPage
+                                onIssueStarted={handleCreateDtsIssueSession}
+                                onSwitchToChat={showChatMainView}
+                              />
                             </AutomationsMainBreadcrumbFrame>
                           </main>
                         ) : workspaceMainView === "plugin-store" && !isWebRemoteControlShell ? (

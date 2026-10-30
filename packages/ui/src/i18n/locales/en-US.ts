@@ -6268,6 +6268,7 @@ const enUS: Record<string, string> = {
   "workspace.openDtsList": "DTS list",
   "mae.dts.list.title": "DTS list",
   "mae.dts.list.subtitle": "Fetch actionable DTS tickets under your name; each initiated ticket runs an independent workflow.",
+  "mae.dts.list.breadcrumbLabel": "DTS list path",
   "mae.dts.list.mockBanner": "DEV mock DTS: tickets are local mock data; the flow matches production.",
   "mae.dts.list.search": "Search ticket no. / title…",
   "mae.dts.list.refresh": "Refresh",
