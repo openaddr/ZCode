@@ -131,78 +131,82 @@ export function DtsListPage(props: DtsListPageProps) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto" data-testid="mae-dts-list">
-      <div className="flex items-center gap-3 px-6 pt-5">
-        <h2 className="text-lg font-semibold">{intl.formatMessage({ id: "mae.dts.list.title" })}</h2>
-        {board?.mock ? (
-          <span className="rounded-full border border-yellow-600/60 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-600">
-            {intl.formatMessage({ id: "mae.dts.list.mockBanner" })}
+    <div className="min-h-0 flex-1 overflow-y-auto" data-testid="mae-dts-list">
+      {/* mae: 内容列对齐 automations 主视图(mx-auto max-w-5xl);描边一律用 card-border token——
+        裸 border 类在 Tailwind v4 默认取 currentColor,暗色主题下渲染成近白网格(刺眼根因,#57) */}
+      <div className="mx-auto flex w-full max-w-5xl flex-col px-4 py-4 md:px-6 md:py-5">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">{intl.formatMessage({ id: "mae.dts.list.title" })}</h2>
+          {board?.mock ? (
+            <span className="rounded-full border border-yellow-500/25 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-500/90">
+              {intl.formatMessage({ id: "mae.dts.list.mockBanner" })}
+            </span>
+          ) : null}
+          <Button className="ml-auto" size="sm" data-testid="mae-dts-start" onClick={() => starting === null && setStarting(board?.tickets[0] ?? null)}>
+            {intl.formatMessage({ id: "mae.dts.list.start" })}
+          </Button>
+        </div>
+        <p className="pt-1 text-muted-foreground text-xs">{intl.formatMessage({ id: "mae.dts.list.subtitle" })}</p>
+        <div className="flex flex-wrap items-center gap-2 py-3">
+          <Input
+            className="h-8 w-64"
+            placeholder={intl.formatMessage({ id: "mae.dts.list.search" })}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            data-testid="mae-dts-search"
+          />
+          <Button variant="ghost" size="sm" onClick={() => void refresh()}>
+            {intl.formatMessage({ id: "mae.dts.list.refresh" })}
+          </Button>
+          <span className="ml-auto text-muted-foreground text-xs">
+            {intl.formatMessage({ id: "mae.dts.list.count" }, { count: tickets.length, total: board?.total ?? 0 })}
           </span>
-        ) : null}
-        <Button className="ml-auto" size="sm" data-testid="mae-dts-start" onClick={() => starting === null && setStarting(board?.tickets[0] ?? null)}>
-          {intl.formatMessage({ id: "mae.dts.list.start" })}
-        </Button>
-      </div>
-      <p className="px-6 pt-1 text-muted-foreground text-xs">{intl.formatMessage({ id: "mae.dts.list.subtitle" })}</p>
-      <div className="flex flex-wrap items-center gap-2 px-6 py-3">
-        <Input
-          className="h-8 w-64"
-          placeholder={intl.formatMessage({ id: "mae.dts.list.search" })}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          data-testid="mae-dts-search"
-        />
-        <Button variant="ghost" size="sm" onClick={() => void refresh()}>
-          {intl.formatMessage({ id: "mae.dts.list.refresh" })}
-        </Button>
-        <span className="ml-auto text-muted-foreground text-xs">
-          {intl.formatMessage({ id: "mae.dts.list.count" }, { count: tickets.length, total: board?.total ?? 0 })}
-        </span>
-      </div>
-      <div className="mx-6 mb-6 min-h-0 flex-1 rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground text-xs">
-              <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.ticket" })}</th>
-              <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.severity" })}</th>
-              <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.status" })}</th>
-              <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.action" })}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tickets.map((ticket) => (
-              <tr key={ticket.ticket} className="border-b last:border-b-0 hover:bg-muted/50">
-                <td className="px-3 py-2 font-mono text-xs">{ticket.ticket}</td>
-                <td className="px-3 py-2">{ticket.severity}</td>
-                <td className="px-3 py-2 text-muted-foreground">{ticket.status}</td>
-                <td className="px-3 py-2">
-                  <Button variant="ghost" size="sm" onClick={() => setStarting(ticket)}>
-                    {intl.formatMessage({ id: "mae.dts.list.start" })}
-                  </Button>
-                </td>
+        </div>
+        <div className="mb-6 overflow-hidden rounded-lg border border-card-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-card-border text-left text-muted-foreground text-xs">
+                <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.ticket" })}</th>
+                <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.severity" })}</th>
+                <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.status" })}</th>
+                <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.action" })}</th>
               </tr>
-            ))}
-            {tickets.length === 0 ? (
-              <tr>
-                <td className="px-3 py-6 text-center text-muted-foreground" colSpan={4}>
-                  {intl.formatMessage({ id: "mae.dts.list.empty" })}
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {tickets.map((ticket) => (
+                <tr key={ticket.ticket} className="border-b border-card-border transition-colors last:border-b-0 hover:bg-hover">
+                  <td className="px-3 py-2 font-mono text-xs">{ticket.ticket}</td>
+                  <td className="px-3 py-2">{ticket.severity}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{ticket.status}</td>
+                  <td className="px-3 py-2">
+                    <Button variant="ghost" size="sm" onClick={() => setStarting(ticket)}>
+                      {intl.formatMessage({ id: "mae.dts.list.start" })}
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {tickets.length === 0 ? (
+                <tr>
+                  <td className="px-3 py-6 text-center text-muted-foreground" colSpan={4}>
+                    {intl.formatMessage({ id: "mae.dts.list.empty" })}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {starting !== null ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="mae-dts-start-modal">
-          <div className="w-[420px] rounded-xl border bg-card p-4 shadow-lg">
+          <div className="w-[420px] rounded-xl border border-card-border bg-card p-4 shadow-xl">
             <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "mae.dts.start.title" })}</h3>
-            <div className="mt-3 rounded-md border bg-background px-2 py-1.5 font-mono text-xs">
+            <div className="mt-3 rounded-md border border-card-border bg-muted/40 px-2 py-1.5 font-mono text-xs">
               {starting.ticket} · {starting.title}
             </div>
             <label className="mt-3 block text-muted-foreground text-xs">{intl.formatMessage({ id: "mae.dts.start.module" })}</label>
             <select
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-xs"
+              className="mt-1 w-full rounded-md border border-input-border bg-background px-2 py-1.5 text-xs"
               value={moduleName}
               onChange={(event) => setModuleName(event.target.value)}
               data-testid="mae-dts-start-module"
@@ -221,8 +225,8 @@ export function DtsListPage(props: DtsListPageProps) {
                   key={item.value}
                   type="button"
                   className={cn(
-                    "flex-1 rounded-lg border px-2 py-1.5 text-center text-xs",
-                    tier === item.value ? "border-primary bg-primary/10" : "border-border",
+                    "flex-1 rounded-lg border px-2 py-1.5 text-center text-xs transition-colors",
+                    tier === item.value ? "border-primary bg-primary/10" : "border-input-border hover:bg-hover",
                   )}
                   onClick={() => setTier(item.value)}
                 >
@@ -233,7 +237,7 @@ export function DtsListPage(props: DtsListPageProps) {
             </div>
             <label className="mt-3 block text-muted-foreground text-xs">{intl.formatMessage({ id: "mae.dts.start.note" })}</label>
             <textarea
-              className="mt-1 h-16 w-full rounded-md border bg-background px-2 py-1 text-xs"
+              className="mt-1 h-16 w-full rounded-md border border-input-border bg-background px-2 py-1 text-xs"
               value={note}
               onChange={(event) => setNote(event.target.value)}
             />
