@@ -3,10 +3,12 @@
  * 调用方(UI 渲染层、桌面 main、会话客户端)只准 import 本文件或 index.ts;
  * 领域实现(domain/)与传输适配(adapters/)都是模块内部细节。
  *
- * 规格与决策:specs/mae/dts-flow.md(D15);wayfinder 地图 openaddr/ZCode#37。
+ * 规格与决策:specs/mae/dts-flow.md(D15,2026-10-30 修订:数据面同源 mae-flow-cloud);
+ * wayfinder 地图 openaddr/ZCode#37。
  */
 export { maeDtsFlowModule } from "./module.js";
 export {
+  DEPRECATED_CONFIG_KEYS,
   DtsFlowConfigError,
   KNOWN_CONFIG_KEYS,
   type DtsFlowConfig,
@@ -25,23 +27,21 @@ export { fsExists, fsProbeOptions } from "./adapters/fsProbe.js";
 export {
   DTS_ACTIONABLE_STATUS,
   DtsFlowGatewayError,
+  type DtsBindingEntry,
+  type DtsBindingMap,
+  type DtsModuleOption,
+  type DtsPerson,
   type DtsTicketDetail,
   type DtsTicketSummary,
-  buildDetailArgs,
-  buildListArgs,
   dtsVersionGroup,
-  extractDatas,
   isActionable,
-  mapDtsRow,
-  parseToolResultText,
 } from "./domain/dts.js";
 export {
   type CreateGatewayInput,
+  CloudPlatformGateway,
   type DtsGateway,
   MockDtsGateway,
-  McpDtsGateway,
   createDtsGateway,
-  tokenFileReader,
 } from "./adapters/dtsGateway.js";
 export {
   DEFAULT_INTERVENTION_TIER,
@@ -106,21 +106,6 @@ export {
   recordStage,
   saveIssueLedger,
 } from "./adapters/ledgerStore.js";
-export {
-  ModuleBindingsError,
-  type ModuleBindings,
-  type ModuleRepoBinding,
-  type ResolvedModuleBindings,
-  findVersionBranch,
-  resolveModuleBindings,
-  validateModules,
-} from "./domain/moduleBindings.js";
-export {
-  MODULE_BINDINGS_PATH,
-  fetchCloudModuleBindings,
-  loadLocalModuleBindings,
-  localBindingsPath,
-} from "./adapters/moduleBindingsStore.js";
 export { KNOWN_DEPENDENCIES, type DtsFlowService, type DtsFlowServiceDeps } from "./app/service.js";
 export { createDtsFlowService } from "./adapters/serviceFactory.js";
 export { type StartedHttpFace, type HttpFaceOptions, startHttpFace } from "./adapters/http.js";

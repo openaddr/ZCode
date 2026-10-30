@@ -12,6 +12,7 @@ import {
   loadIssueLedger,
   readIssueEvents,
   recordStage,
+  saveIssueLedger,
 } from "../src/adapters/ledgerStore.js";
 import { applyStage } from "../src/domain/ledger.js";
 
@@ -20,7 +21,7 @@ async function tempDataDir(): Promise<string> {
 }
 
 describe("issue ledger", () => {
-  it("创建→读取往返;重复创建拒绝;非法单号拒绝", async () => {
+  it("创建→读取往返;进行中重复发起拒绝;非法单号拒绝", async () => {
     const dataDir = await tempDataDir();
     const created = await createIssueLedger(dataDir, { ticket: "DTS-2026-1001" });
     expect(created.ticket).toBe("DTS-2026-1001");
@@ -28,9 +29,52 @@ describe("issue ledger", () => {
     expect(created.interventionTier).toBe("align_first");
     expect(created.stages["dts_info"]).toBe("pending");
 
-    await expect(createIssueLedger(dataDir, { ticket: "DTS-2026-1001" })).rejects.toThrow(/已存在/);
+    await expect(createIssueLedger(dataDir, { ticket: "DTS-2026-1001" })).rejects.toThrow(/进行中/);
     await expect(createIssueLedger(dataDir, { ticket: "../escape" })).rejects.toThrow(IssueLedgerError);
     await expect(loadIssueLedger(dataDir, "DTS-2026-9999")).rejects.toThrow(/不存在/);
+  });
+
+  it("收口后再发起=新一轮:旧台账留档不可见,rounds+1,事件含 issue_reinitiated", async () => {
+    const dataDir = await tempDataDir();
+    await createIssueLedger(dataDir, { ticket: "DTS-2026-1003" });
+    await recordStage(dataDir, "DTS-2026-1003", "dts_info", "done");
+
+    const closed = await loadIssueLedger(dataDir, "DTS-2026-1003");
+    closed.closedAt = "2026-10-30T08:00:00.000Z";
+    await saveIssueLedger(dataDir, closed);
+
+    const again = await createIssueLedger(dataDir, { ticket: "DTS-2026-1003", moduleName: "报表中心" });
+    expect(again.stage).toBe("dts_info");
+    expect(again.rounds).toBe(1);
+    expect(again.moduleName).toBe("报表中心");
+    expect(again.createdAt).toBe(closed.createdAt);
+
+    // 旧台账留档在目录内但 list 不拾取(归档轮不可再推进)。
+    const dirFiles = await readdir(path.join(dataDir, "issues", "DTS-2026-1003"));
+    expect(dirFiles.some((name) => name.startsWith("ledger.prev-1-"))).toBe(true);
+    const list = await listIssueLedgers(dataDir);
+    expect(list).toHaveLength(1);
+    expect(list[0]?.rounds).toBe(1);
+
+    // 留档文件内容 = 收口态旧台账(历史可追溯)。
+    const prevName = dirFiles.find((name) => name.startsWith("ledger.prev-1-")) ?? "";
+    const prev = JSON.parse(await readFile(path.join(dataDir, "issues", "DTS-2026-1003", prevName), "utf8")) as { closedAt: string | null };
+    expect(prev.closedAt).toBe("2026-10-30T08:00:00.000Z");
+
+    const events = await readIssueEvents(dataDir, "DTS-2026-1003");
+    expect(events.some((event) => event.kind === "issue_reinitiated")).toBe(true);
+  });
+
+  it("归档后再发起同样放行;进行中(未收口未归档)拒绝", async () => {
+    const dataDir = await tempDataDir();
+    await createIssueLedger(dataDir, { ticket: "DTS-2026-1004" });
+    const archived = await loadIssueLedger(dataDir, "DTS-2026-1004");
+    archived.closedAt = "2026-10-30T08:00:00.000Z";
+    archived.archived = true;
+    await saveIssueLedger(dataDir, archived);
+    const again = await createIssueLedger(dataDir, { ticket: "DTS-2026-1004" });
+    expect(again.rounds).toBe(1);
+    expect(again.archived).toBe(false);
   });
 
   it("recordStage 落台账并追加事件;读回事件顺序保真", async () => {

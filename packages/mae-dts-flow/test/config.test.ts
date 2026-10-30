@@ -18,7 +18,6 @@ describe("loadConfig", () => {
     expect(mockConfig.employeeId).toBe("dev");
     expect(mockConfig.dataDir).toBe(path.join(home, ".zcode-mae", "dts-flow"));
     expect(mockConfig.binDir).toBe(path.join(home, ".zcode-mae", "bin"));
-    expect(mockConfig.dtsTokenPath).toBe(path.join(home, ".zcode-mae", "dts-flow", "mcp-token"));
     expect(mockConfig.httpPort).toBe(8788);
   });
 
@@ -28,7 +27,7 @@ describe("loadConfig", () => {
     await expect(loadConfig({ homeDir: home })).rejects.toThrow(/employeeId/);
   });
 
-  it("配置文件字段生效;未知字段拒绝", async () => {
+  it("配置文件字段生效;未知字段拒绝;直连时代退役键容忍忽略", async () => {
     const home = await tempHome();
     const configPath = await writeConfig(home, {
       employeeId: "ning",
@@ -39,11 +38,18 @@ describe("loadConfig", () => {
     await expect(loadConfig({ homeDir: home, configPath })).rejects.toThrow(/unknownKey/);
     const config = await loadConfig({
       homeDir: home,
-      configPath: await writeConfig(home, { employeeId: "ning", httpPort: 9999, cloudBaseUrl: "http://mae-flow.internal:8787/" }),
+      configPath: await writeConfig(home, {
+        employeeId: "ning",
+        httpPort: 9999,
+        cloudBaseUrl: "http://mae-flow.internal:8787/",
+        dtsGatewayUrl: "http://old-gateway/rpc",
+        dtsTokenPath: "C:/old/token",
+      }),
     });
     expect(config.employeeId).toBe("ning");
     expect(config.httpPort).toBe(9999);
     expect(config.cloudBaseUrl).toBe("http://mae-flow.internal:8787");
+    expect("dtsGatewayUrl" in config).toBe(false);
   });
 
   it("非法值 fail-loud:坏端口/坏 URL/给定的配置文件不存在", async () => {

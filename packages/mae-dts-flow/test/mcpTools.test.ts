@@ -15,8 +15,6 @@ function buildService(root: string): DtsFlowService {
       binDir: path.join(root, "bin"),
       employeeId: "ning",
       cloudBaseUrl: null,
-      dtsGatewayUrl: null,
-      dtsTokenPath: path.join(root, "mcp-token"),
       httpPort: 0,
       mock: true,
       pipelineBudgetMinutes: 60,
