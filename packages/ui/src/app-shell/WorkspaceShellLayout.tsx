@@ -2612,6 +2612,9 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
                               <DtsListPage
                                 onIssueStarted={handleCreateDtsIssueSession}
                                 onSwitchToChat={showChatMainView}
+                                // mae: 发起状态列点击→切回聊天并打开该单工作区(本地无会话注册表,
+                                // 落到工作区最近会话/草稿视图,单窗口语义的等价映射)
+                                onOpenIssueSession={(workspacePath) => handleStartDraftInWorkspaceInChat(workspacePath)}
                               />
                             </AutomationsMainBreadcrumbFrame>
                           </main>
