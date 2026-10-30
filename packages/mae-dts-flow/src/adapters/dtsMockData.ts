@@ -33,6 +33,7 @@ export const MOCK_BINDINGS: DtsBindingMap = {
 };
 
 export const MOCK_PEOPLE: DtsPerson[] = [
+  { username: "ning", displayName: "宁(mock)" },
   { username: "dev", displayName: "开发员(mock)" },
   { username: "zhangsan", displayName: "张三" },
   { username: "lisi", displayName: "李四" },
