@@ -102,7 +102,8 @@ export class CloudPlatformGateway implements DtsGateway {
   async putBinding(ticket: string, moduleId: string | null, updatedBy: string): Promise<void> {
     const response = await this.request("PUT", `/issues/dts-bindings/${encodeURIComponent(ticket)}`, {
       module_id: moduleId,
-      updated_by: updatedBy,
+      // 匿名改选自报工号(平台 ADR-0069:updated_by 取请求体 account,缺席 400)
+      account: updatedBy,
     });
     if (!response.ok) {
       throw await this.errorFor(response, "绑定落账失败");
