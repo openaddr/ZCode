@@ -130,16 +130,16 @@ describe("CloudPlatformGateway(假云平台契约)", () => {
     });
   });
 
-  it("绑定写:PUT + JSON 体(module_id/updated_by);空值归 null", async () => {
+  it("绑定写:PUT + JSON 体(module_id/account 自报工号,ADR-0069);空值归 null", async () => {
     const gateway = new CloudPlatformGateway(baseUrl, { fetch });
     await gateway.putBinding("DTS-2026-1002", "module-report", "ning");
     const put = seenRequests.find((request) => request.method === "PUT");
     expect(put?.path).toBe("/issues/dts-bindings/DTS-2026-1002");
-    expect(put?.body).toEqual({ module_id: "module-report", updated_by: "ning" });
+    expect(put?.body).toEqual({ module_id: "module-report", account: "ning" });
 
     seenRequests.length = 0;
     await gateway.putBinding("DTS-2026-1002", null, "ning");
-    expect(seenRequests[0]?.body).toEqual({ module_id: null, updated_by: "ning" });
+    expect(seenRequests[0]?.body).toEqual({ module_id: null, account: "ning" });
   });
 
   it("人员名单:display_name 缺席归 null;空用户名剔除", async () => {
