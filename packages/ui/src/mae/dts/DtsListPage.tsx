@@ -1,27 +1,62 @@
-/** DTS列表 主视图页签(#41 定形:云平台 IssueBoard 同款整页;数据经本地服务 HTTP)。 */
-import { useCallback, useEffect, useMemo, useState } from "react";
+/**
+ * DTS列表 主视图页签:云平台 Registration.tsx 完整行为的本地对齐(openaddr/ZCode#58/#59)。
+ * 七列看板(勾选/单号/标题/发起状态/附加信息/所属模块/介入档位)+版本组/列头过滤+
+ * 列显隐列宽拖拽+勾选批量发起;数据经本地服务 HTTP(同源 mae-flow-cloud,#57)。
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button.js";
+import { Checkbox } from "@/components/ui/checkbox.js";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.js";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu.js";
 import { Input } from "@/components/ui/input.js";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.js";
+import { toast } from "@/components/ui/toast.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
-import { cn } from "@/components/lib/utils.js";
+import { BoardRow, HeaderFilter, VersionGroupSelect } from "./dtsBoardRows.js";
 import { DEFAULT_DTS_SERVICE_BASE, dtsIssueOpeningPrompt } from "./useDtsIssues.js";
-
-export interface DtsTicketSummary {
-  ticket: string;
-  title: string;
-  status: string;
-  version: string;
-  severity: string;
-  submitter: string;
-  featureName: string;
-  actionable: boolean;
-}
+import {
+  BOARD_COL_MIN,
+  BOARD_COL_KEYS,
+  COLUMN_PREFS_STORAGE_KEY,
+  FLEX_COL_KEY,
+  type BoardBindingEntry,
+  type BoardColKey,
+  type BoardIssueRef,
+  type BoardTicket,
+  type ColumnShownKey,
+  type TierValue,
+  columnFilter,
+  dtsNoCandidates,
+  defaultColumnPrefs,
+  defaultSelectedGroups,
+  fuzzyFilter,
+  launchFilter,
+  listVersionGroups,
+  liveIssueMap,
+  loadRemarks,
+  mergeRemoteTickets,
+  resolvedModuleOf,
+  sanitizeColumnPrefs,
+  saveRemarks,
+  selectableTickets,
+  unmappedVersionGroups,
+  versionFilter,
+} from "./dtsBoardModel.js";
 
 export interface DtsListPageProps {
-  /** 发起成功后在当前窗口开问题会话(草稿),并切回聊天视图。 */
+  /** 发起成功后在当前窗口开问题会话(草稿);批量时逐张调用,最后切回聊天视图。 */
   onIssueStarted: (workspacePath: string, openingBrief: string) => void;
   onSwitchToChat: () => void;
+  /** 发起状态列点击:打开该单名下进行中的问题会话。 */
+  onOpenIssueSession?: (workspacePath: string) => void;
   baseUrl?: string;
 }
 
@@ -29,166 +64,546 @@ interface TicketsResponse {
   mock: boolean;
   total: number;
   actionableCount: number;
-  tickets: DtsTicketSummary[];
+  tickets: Array<{
+    ticket: string;
+    title: string;
+    status: string;
+    version: string;
+    severity: string;
+    submitter: string;
+    url: string;
+    branch: string | null;
+    moduleId: string | null;
+  }>;
 }
 
-interface ModuleBinding {
-  moduleName: string;
-  repos: string[];
+interface ModuleCatalogResponse {
+  modules: Array<{ id: string; name: string; repositories: string[] }>;
 }
 
-const TIERS = [
-  { value: "full_auto", label: "全自动", hint: "不问,跑到 MR 绿" },
-  { value: "report_first", label: "优先报告", hint: "只在报告停一次" },
-  { value: "align_first", label: "优先对齐", hint: "关键节点都确认 · 默认" },
-] as const;
+interface PeopleResponse {
+  people: Array<{ username: string; displayName: string | null }>;
+}
+
+interface IssueListResponse {
+  issues: Array<{ ticket: string; workspacePath: string; closedAt: string | null; archived: boolean }>;
+}
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
+  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!response.ok) {
+    const detail = typeof body["error"] === "string" ? body["error"] : `HTTP ${String(response.status)}`;
+    throw new Error(detail);
+  }
+  return body as T;
+}
 
 export function DtsListPage(props: DtsListPageProps) {
   const { intl } = useZCodeIntl();
   const baseUrl = props.baseUrl ?? DEFAULT_DTS_SERVICE_BASE;
-  const [board, setBoard] = useState<TicketsResponse | null>(null);
-  const [available, setAvailable] = useState(true);
-  const [search, setSearch] = useState("");
-  const [starting, setStarting] = useState<DtsTicketSummary | null>(null);
-  const [moduleName, setModuleName] = useState("");
-  const [modules, setModules] = useState<ModuleBinding[]>([]);
-  const [note, setNote] = useState("");
-  const [tier, setTier] = useState<(typeof TIERS)[number]["value"]>("align_first");
+  const [tickets, setTickets] = useState<BoardTicket[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mock, setMock] = useState(false);
+  const [employeeId, setEmployeeId] = useState("");
+  const [owner, setOwner] = useState<string | null>(null);
+  const [people, setPeople] = useState<Array<{ username: string; displayName: string | null }> | null>(null);
+  const [modules, setModules] = useState<Array<{ id: string; name: string; repositories: string[] }>>([]);
+  const [bindings, setBindings] = useState<Record<string, BoardBindingEntry>>({});
+  const [issues, setIssues] = useState<BoardIssueRef[]>([]);
+  const [query, setQuery] = useState("");
+  const [remote, setRemote] = useState<{ loading: boolean; tickets: BoardTicket[] }>({ loading: false, tickets: [] });
+  const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
+  /** 默认勾选最高版本组只在首拉时发生一次,之后用户全权接管(云端口径)。 */
+  const didDefaultVersions = useRef(false);
+  const [ticketFilter, setTicketFilter] = useState("");
+  const [titleFilter, setTitleFilter] = useState("");
+  const [showUnlaunched, setShowUnlaunched] = useState(true);
+  const [showLaunched, setShowLaunched] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [remarks, setRemarks] = useState<Record<string, string>>({});
+  const [remarkEditing, setRemarkEditing] = useState<string | null>(null);
+  const [remarkDraft, setRemarkDraft] = useState("");
+  const [tiers, setTiers] = useState<Record<string, TierValue>>({});
+  const [columnPrefs, setColumnPrefs] = useState(defaultColumnPrefs);
+  const [resizing, setResizing] = useState<{ key: BoardColKey; startX: number; startWidth: number } | null>(null);
+  const [bindingTicket, setBindingTicket] = useState<string | null>(null);
+  const [bindingFail, setBindingFail] = useState<{ ticket: string; message: string } | null>(null);
+  const [launching, setLaunching] = useState(false);
 
-  const refresh = useCallback(async (): Promise<void> => {
-    try {
-      const response = await fetch(`${baseUrl}/api/dts/tickets`);
-      if (!response.ok) throw new Error(`HTTP ${String(response.status)}`);
-      setBoard((await response.json()) as TicketsResponse);
-      setAvailable(true);
-    } catch {
-      setAvailable(false);
-      setBoard(null);
-    }
-  }, [baseUrl]);
+  /* ---------- 数据加载 ---------- */
+
+  const loadBoard = useCallback(
+    async (ownerId: string) => {
+      setError(null);
+      try {
+        const health = await fetchJson<{ mock: boolean; employeeId: string }>(`${baseUrl}/api/health`);
+        setMock(health.mock);
+        setEmployeeId(health.employeeId);
+        const effective = ownerId || health.employeeId;
+        const board = await fetchJson<TicketsResponse>(`${baseUrl}/api/dts/tickets?owner=${encodeURIComponent(effective)}`);
+        setTickets(board.tickets.map((ticket) => ({ ...ticket, actionable: ticket.status === "开发人员实施修改" })));
+        try {
+          const issueList = await fetchJson<IssueListResponse>(`${baseUrl}/api/issues`);
+          setIssues(issueList.issues.map((issue) => ({
+            ticket: issue.ticket, workspacePath: issue.workspacePath, closedAt: issue.closedAt, archived: issue.archived,
+          })));
+        } catch {
+          setIssues([]);
+        }
+      } catch (caught) {
+        setTickets(null);
+        setError(caught instanceof Error ? caught.message : String(caught));
+      }
+    },
+    [baseUrl],
+  );
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    setColumnPrefs(sanitizeColumnPrefs(safeStorageGet(COLUMN_PREFS_STORAGE_KEY)));
+    setRemarks(loadRemarks(safeStorage()));
+  }, []);
 
   useEffect(() => {
-    if (starting === null) return;
-    let cancelled = false;
+    void loadBoard(owner ?? "");
+  }, [loadBoard, owner]);
+
+  useEffect(() => {
     void (async () => {
       try {
-        const response = await fetch(`${baseUrl}/api/modules`);
-        const body = (await response.json()) as { modules: ModuleBinding[] };
-        if (!cancelled) setModules(body.modules ?? []);
+        const catalog = await fetchJson<ModuleCatalogResponse>(`${baseUrl}/api/modules`);
+        setModules(catalog.modules ?? []);
       } catch {
-        if (!cancelled) setModules([]);
+        setModules([]);
+      }
+      try {
+        const peopleBody = await fetchJson<PeopleResponse>(`${baseUrl}/api/dts/people`);
+        setPeople(peopleBody.people ?? []);
+      } catch {
+        setPeople(null);
+      }
+      try {
+        const bindingsBody = await fetchJson<{ bindings: Record<string, BoardBindingEntry> }>(`${baseUrl}/api/dts/bindings`);
+        setBindings(bindingsBody.bindings ?? {});
+      } catch {
+        setBindings({});
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseUrl, starting]);
+  }, [baseUrl]);
 
-  const tickets = useMemo(() => {
-    const all = board?.tickets ?? [];
-    const query = search.trim();
-    if (!query) return all;
-    return all.filter((ticket) => ticket.ticket.includes(query) || ticket.title.includes(query));
-  }, [board, search]);
-
-  const start = useCallback(async (): Promise<void> => {
-    if (starting === null || !moduleName) return;
-    setError(null);
-    try {
-      const response = await fetch(`${baseUrl}/api/issues`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ticket: starting.ticket, module: moduleName, interventionTier: tier }),
-      });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? `HTTP ${String(response.status)}`);
-      }
-      const body = (await response.json()) as { workspace: { workspacePath: string }; openingBrief: string };
-      const brief = [body.openingBrief, note.trim() ? `附加信息:${note.trim()}` : ""].filter(Boolean).join("\n");
-      props.onIssueStarted(body.workspace.workspacePath, brief || dtsIssueOpeningPrompt(starting.ticket));
-      props.onSwitchToChat();
-      setStarting(null);
-      setModuleName("");
-      setNote("");
-      void refresh();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+  /** 远程补查:本地搜索无命中且输入像单号时,防抖查单详情入列(云端同款防抖+序号守卫)。 */
+  const remoteSeq = useRef(0);
+  useEffect(() => {
+    const candidates = dtsNoCandidates(query);
+    const localEmpty = tickets !== null && fuzzyFilter(tickets, query).length === 0;
+    if (tickets === null || !query.trim() || candidates.length === 0 || !localEmpty) {
+      setRemote({ loading: false, tickets: [] });
+      return;
     }
-  }, [baseUrl, moduleName, note, props, refresh, starting, tier]);
+    const seq = ++remoteSeq.current;
+    setRemote({ loading: true, tickets: [] });
+    const timer = setTimeout(async () => {
+      const results = await Promise.all(candidates.map(async (no) => {
+        try {
+          const detail = await fetchJson<BoardTicket & { description?: string }>(`${baseUrl}/api/dts/tickets/${encodeURIComponent(no)}`);
+          return { ticket: detail.ticket, title: detail.title, status: detail.status, version: detail.version, severity: detail.severity, submitter: detail.submitter, url: detail.url, branch: detail.branch, moduleId: detail.moduleId, actionable: detail.status === "开发人员实施修改" };
+        } catch {
+          return null;
+        }
+      }));
+      if (remoteSeq.current !== seq) return;
+      setRemote({ loading: false, tickets: results.filter((row): row is BoardTicket => row !== null) });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [baseUrl, query, tickets]);
 
-  if (!available) {
+  /* ---------- 过滤链与派生 ---------- */
+
+  const liveMap = useMemo(() => liveIssueMap(issues), [issues]);
+  const localMatches = useMemo(() => (tickets === null ? undefined : fuzzyFilter(tickets, query)), [tickets, query]);
+  const display = useMemo(() => {
+    if (localMatches === undefined) return [];
+    const merged = mergeRemoteTickets(versionFilter(columnFilter(localMatches, ticketFilter, titleFilter), selectedVersions), remote.tickets);
+    return launchFilter(merged, liveMap, showUnlaunched, showLaunched);
+  }, [localMatches, ticketFilter, titleFilter, selectedVersions, remote.tickets, liveMap, showUnlaunched, showLaunched]);
+  const displayTotal = (localMatches?.length ?? 0) + remote.tickets.length;
+
+  const versionChoices = useMemo(() => listVersionGroups(tickets ?? []), [tickets]);
+  /** 首次拿到单据:默认勾选最高版本组(云端拍板口径);此后用户全权接管。 */
+  useEffect(() => {
+    if (tickets === null || didDefaultVersions.current) return;
+    didDefaultVersions.current = true;
+    setSelectedVersions(defaultSelectedGroups(listVersionGroups(tickets)));
+  }, [tickets]);
+
+  const unmapped = useMemo(() => unmappedVersionGroups(display), [display]);
+  const selectable = useMemo(() => selectableTickets(display, liveMap, bindings), [display, liveMap, bindings]);
+  const displayedSelectedCount = selectable.filter((no) => selected.includes(no)).length;
+  const allDisplayedSelected = selectable.length > 0 && displayedSelectedCount === selectable.length;
+
+  /** 勾选范围限定展示列表;已勾但被过滤掉的单不在展示列表,保持原样,发起时照常带上。 */
+  function toggleSelectAll() {
+    if (allDisplayedSelected) {
+      const shown = new Set(selectable);
+      setSelected((current) => current.filter((no) => !shown.has(no)));
+    } else {
+      setSelected((current) => [...new Set([...current, ...selectable])]);
+    }
+  }
+
+  /* ---------- 列管理 ---------- */
+
+  function updateColumnPrefs(next: { widths?: Partial<Record<BoardColKey, number>>; shown?: Partial<Record<ColumnShownKey, boolean>> }) {
+    setColumnPrefs((current) => {
+      const merged = { widths: { ...current.widths, ...next.widths }, shown: { ...current.shown, ...next.shown } };
+      safeStorageSet(COLUMN_PREFS_STORAGE_KEY, JSON.stringify(merged));
+      return merged;
+    });
+  }
+
+  useEffect(() => {
+    if (resizing === null) return;
+    function onMove(event: PointerEvent) {
+      if (resizing === null) return;
+      const delta = event.clientX - resizing.startX;
+      const min = BOARD_COL_MIN[resizing.key];
+      const width = Math.max(min, Math.min(Math.round(resizing.startWidth + delta), 800));
+      updateColumnPrefs({ widths: { [resizing.key]: width } });
+    }
+    function onUp() {
+      setResizing(null);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [resizing]);
+
+  /* ---------- 行为 ---------- */
+
+  function refresh() {
+    setQuery("");
+    setSelected([]);
+    setSelectedVersions([]);
+    setTicketFilter("");
+    setTitleFilter("");
+    setShowUnlaunched(true);
+    setShowLaunched(false);
+    void loadBoard(owner ?? "");
+  }
+
+  function saveRemarkDraft() {
+    if (remarkEditing === null) return;
+    const ticketNo = remarkEditing;
+    setRemarks((current) => {
+      const next = { ...current };
+      if (remarkDraft.trim()) next[ticketNo] = remarkDraft;
+      else delete next[ticketNo];
+      saveRemarks(safeStorage(), next);
+      return next;
+    });
+    setRemarkEditing(null);
+  }
+
+  async function changeModule(ticketNo: string, moduleId: string) {
+    setBindingTicket(ticketNo);
+    setBindingFail(null);
+    try {
+      await fetchJson(`${baseUrl}/api/dts/bindings/${encodeURIComponent(ticketNo)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ module_id: moduleId === "" ? null : moduleId }),
+      });
+      setBindings((current) => {
+        const next = { ...current };
+        if (moduleId) next[ticketNo] = { moduleId, updatedBy: employeeId, updatedAt: new Date().toISOString() };
+        else delete next[ticketNo];
+        return next;
+      });
+    } catch (caught) {
+      setBindingFail({ ticket: ticketNo, message: caught instanceof Error ? caught.message : String(caught) });
+    } finally {
+      setBindingTicket(null);
+    }
+  }
+
+  /** 批量发起:逐张串行,单张失败不拖垮整批(云端同款);成功切聊天+toast,失败保勾选与原因。 */
+  async function launchSelected() {
+    if (selected.length === 0 || launching) return;
+    setLaunching(true);
+    const failures: string[] = [];
+    let succeeded = 0;
+    try {
+      for (const ticketNo of selected) {
+        const clash = liveMap.get(ticketNo);
+        if (clash) {
+          failures.push(`${ticketNo} → 已有进行中的问题会话`);
+          continue;
+        }
+        const ticket = tickets?.find((item) => item.ticket === ticketNo) ?? remote.tickets.find((item) => item.ticket === ticketNo);
+        const moduleId = resolvedModuleOf(ticketNo, bindings, ticket?.moduleId ?? null);
+        if (!moduleId) {
+          failures.push(`${ticketNo} → 未匹配到业务模块,发起被拦`);
+          continue;
+        }
+        const tier = tiers[ticketNo];
+        try {
+          const started = await fetchJson<{ workspace: { workspacePath: string }; openingBrief: string }>(`${baseUrl}/api/issues`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              ticket: ticketNo,
+              module: moduleId,
+              ...(tier ? { interventionTier: tier } : {}),
+            }),
+          });
+          succeeded += 1;
+          const brief = [started.openingBrief, remarks[ticketNo]?.trim() ? `附加信息:${remarks[ticketNo]?.trim()}` : ""]
+            .filter(Boolean)
+            .join("\n");
+          props.onIssueStarted(started.workspace.workspacePath, brief || dtsIssueOpeningPrompt(ticketNo));
+          setRemarks((current) => {
+            const next = { ...current };
+            delete next[ticketNo];
+            saveRemarks(safeStorage(), next);
+            return next;
+          });
+          setTiers((current) => {
+            const next = { ...current };
+            delete next[ticketNo];
+            return next;
+          });
+        } catch (caught) {
+          failures.push(`${ticketNo} → ${caught instanceof Error ? caught.message : String(caught)}`);
+        }
+      }
+      setSelected((current) => current.filter((no) => failures.some((failure) => failure.startsWith(`${no} `))));
+      if (succeeded > 0) props.onSwitchToChat();
+      toast(intl.formatMessage(
+        { id: "mae.dts.list.batchToast" },
+        { success: succeeded, failed: failures.length },
+      ) + (failures.length > 0 ? `\n${failures.join("\n")}` : ""), { variant: failures.length > 0 ? "warning" : undefined });
+      void loadBoard(owner ?? "");
+    } finally {
+      setLaunching(false);
+    }
+  }
+
+  /* ---------- 渲染 ---------- */
+
+  if (error !== null) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground text-sm" data-testid="mae-dts-list-unavailable">
-        {intl.formatMessage({ id: "mae.dts.list.unavailable" })}
+      <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground text-sm" data-testid="mae-dts-list-unavailable">
+        <p>{intl.formatMessage({ id: "mae.dts.list.unavailable" })}</p>
+        <p className="max-w-xl text-center text-xs">{error}</p>
       </div>
     );
   }
 
+  const visibleCols = (key: ColumnShownKey) => columnPrefs.shown[key];
+  const colWidth = (key: BoardColKey) => (key === FLEX_COL_KEY ? undefined : columnPrefs.widths[key]);
+
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto" data-testid="mae-dts-list">
-      {/* mae: 内容列对齐 automations 主视图(mx-auto max-w-5xl);描边一律用 card-border token——
-        裸 border 类在 Tailwind v4 默认取 currentColor,暗色主题下渲染成近白网格(刺眼根因,#57) */}
-      <div className="mx-auto flex w-full max-w-5xl flex-col px-4 py-4 md:px-6 md:py-5">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto" data-testid="mae-dts-list">
+      <div className="flex flex-col px-6 py-5">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold">{intl.formatMessage({ id: "mae.dts.list.title" })}</h2>
-          {board?.mock ? (
+          {mock ? (
             <span className="rounded-full border border-yellow-500/25 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-500/90">
               {intl.formatMessage({ id: "mae.dts.list.mockBanner" })}
             </span>
           ) : null}
-          <Button className="ml-auto" size="sm" data-testid="mae-dts-start" onClick={() => starting === null && setStarting(board?.tickets[0] ?? null)}>
-            {intl.formatMessage({ id: "mae.dts.list.start" })}
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">{intl.formatMessage({ id: "mae.dts.list.owner" })}</span>
+            {people !== null ? (
+              <Select value={owner ?? employeeId} onValueChange={(value) => setOwner(value)}>
+                <SelectTrigger className="h-8 w-40 text-xs" aria-label={intl.formatMessage({ id: "mae.dts.list.owner" })}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {people.map((person) => (
+                    <SelectItem key={person.username} value={person.username}>
+                      {person.displayName ?? person.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                className="h-8 w-40 text-xs"
+                placeholder={intl.formatMessage({ id: "mae.dts.list.ownerFallback" })}
+                defaultValue={owner ?? employeeId}
+                onBlur={(event) => setOwner(event.target.value.trim())}
+              />
+            )}
+          </div>
         </div>
         <p className="pt-1 text-muted-foreground text-xs">{intl.formatMessage({ id: "mae.dts.list.subtitle" })}</p>
+
         <div className="flex flex-wrap items-center gap-2 py-3">
           <Input
-            className="h-8 w-64"
+            className="h-8 w-72"
             placeholder={intl.formatMessage({ id: "mae.dts.list.search" })}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
             data-testid="mae-dts-search"
           />
-          <Button variant="ghost" size="sm" onClick={() => void refresh()}>
+          <VersionGroupSelect
+            groups={versionChoices}
+            selected={selectedVersions}
+            unmapped={unmapped.groups}
+            onChange={(next) => setSelectedVersions(next)}
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="mae-dts-columns">
+                {intl.formatMessage({ id: "mae.dts.list.columns" })}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {(["title", "launch", "remark", "module", "tier"] as const).map((key) => (
+                <label key={key} className="flex min-h-8 cursor-pointer items-center gap-2.5 rounded-md px-2 text-sm hover:bg-hover">
+                  <Checkbox
+                    checked={visibleCols(key)}
+                    onCheckedChange={(checked) => updateColumnPrefs({ shown: { [key]: checked === true } as Record<ColumnShownKey, boolean> })}
+                  />
+                  {intl.formatMessage({ id: `mae.dts.list.col.${key}` })}
+                </label>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <span className="ml-auto text-muted-foreground text-xs">
+            {intl.formatMessage({ id: "mae.dts.list.count" }, { count: display.length, total: displayTotal })}
+          </span>
+          <Button variant="ghost" size="sm" onClick={refresh} data-testid="mae-dts-refresh">
             {intl.formatMessage({ id: "mae.dts.list.refresh" })}
           </Button>
-          <span className="ml-auto text-muted-foreground text-xs">
-            {intl.formatMessage({ id: "mae.dts.list.count" }, { count: tickets.length, total: board?.total ?? 0 })}
-          </span>
+          <Button
+            size="sm"
+            disabled={selected.length === 0 || launching}
+            data-testid="mae-dts-start"
+            onClick={() => void launchSelected()}
+          >
+            {launching
+              ? intl.formatMessage({ id: "mae.dts.list.launching" })
+              : intl.formatMessage({ id: "mae.dts.list.start" })}
+          </Button>
         </div>
-        <div className="mb-6 overflow-hidden rounded-lg border border-card-border">
-          <table className="w-full text-sm">
+
+        {unmapped.groups.length > 0 || unmapped.versionless ? (
+          <div className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive text-xs" role="alert" data-testid="mae-dts-unmapped-banner">
+            {intl.formatMessage(
+              { id: "mae.dts.list.unmappedBanner" },
+              { groups: unmapped.groups.join("、") },
+            )}
+            {unmapped.versionless ? ` ${intl.formatMessage({ id: "mae.dts.list.unmappedVersionless" })}` : ""}
+          </div>
+        ) : null}
+
+        <div className="mb-6 overflow-x-auto rounded-lg border border-card-border" data-testid="mae-dts-table">
+          <table
+            className="w-full table-fixed text-sm"
+            style={{ minWidth: BOARD_COL_KEYS.reduce((sum, key) => sum + (key === FLEX_COL_KEY ? BOARD_COL_MIN[FLEX_COL_KEY] : columnPrefs.widths[key]), 0) }}
+          >
+            <colgroup>
+              {BOARD_COL_KEYS.filter((key) => key === "select" || key === "ticket" || visibleCols(key as ColumnShownKey)).map((key) => (
+                <col key={key} {...(colWidth(key) === undefined ? {} : { width: colWidth(key) })} />
+              ))}
+            </colgroup>
             <thead>
               <tr className="border-b border-card-border text-left text-muted-foreground text-xs">
-                <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.ticket" })}</th>
-                <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.severity" })}</th>
-                <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.status" })}</th>
-                <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.action" })}</th>
+                <th className="px-2 py-2 font-medium">
+                  <Checkbox
+                    aria-label="全选展示中的问题单"
+                    checked={allDisplayedSelected ? true : displayedSelectedCount > 0 ? "indeterminate" : false}
+                    onCheckedChange={() => toggleSelectAll()}
+                    data-testid="mae-dts-select-all"
+                  />
+                </th>
+                <th className="px-3 py-2 font-medium">
+                  <HeaderFilter label={intl.formatMessage({ id: "mae.dts.list.col.ticket" })} active={ticketFilter.trim().length > 0} onClear={() => setTicketFilter("")}>
+                    <Input autoFocus className="h-8 w-full text-sm" placeholder={intl.formatMessage({ id: "mae.dts.list.filterTicket" })} value={ticketFilter} onChange={(event) => setTicketFilter(event.target.value)} />
+                  </HeaderFilter>
+                </th>
+                {visibleCols("title") ? (
+                  <th className="px-3 py-2 font-medium">
+                    <HeaderFilter label={intl.formatMessage({ id: "mae.dts.list.col.title" })} active={titleFilter.trim().length > 0} onClear={() => setTitleFilter("")}>
+                      <Input autoFocus className="h-8 w-full text-sm" placeholder={intl.formatMessage({ id: "mae.dts.list.filterTitle" })} value={titleFilter} onChange={(event) => setTitleFilter(event.target.value)} />
+                    </HeaderFilter>
+                  </th>
+                ) : null}
+                {visibleCols("launch") ? (
+                  <th className="px-3 py-2 font-medium">
+                    <HeaderFilter label={intl.formatMessage({ id: "mae.dts.list.col.launch" })} active={showUnlaunched !== showLaunched} onClear={() => { setShowUnlaunched(true); setShowLaunched(false); }}>
+                      <div className="flex flex-col gap-1">
+                        {/* mae: 不用 label 包 Radix Checkbox——label 点击转发放大后勾选翻两次(jsdom/实机双坑) */}
+                        <span className="flex cursor-pointer items-center gap-2 text-sm">
+                          <Checkbox checked={showUnlaunched} onCheckedChange={(checked) => setShowUnlaunched(checked === true)} />
+                          {intl.formatMessage({ id: "mae.dts.list.unlaunched" })}
+                        </span>
+                        <span className="flex cursor-pointer items-center gap-2 text-sm">
+                          <Checkbox checked={showLaunched} onCheckedChange={(checked) => setShowLaunched(checked === true)} data-testid="mae-dts-show-launched" />
+                          {intl.formatMessage({ id: "mae.dts.list.showLaunched" })}
+                        </span>
+                      </div>
+                    </HeaderFilter>
+                  </th>
+                ) : null}
+                {visibleCols("remark") ? <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.col.remark" })}</th> : null}
+                {visibleCols("module") ? <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.col.module" })}</th> : null}
+                {visibleCols("tier") ? <th className="px-3 py-2 font-medium">{intl.formatMessage({ id: "mae.dts.list.col.tier" })}</th> : null}
               </tr>
             </thead>
             <tbody>
-              {tickets.map((ticket) => (
-                <tr key={ticket.ticket} className="border-b border-card-border transition-colors last:border-b-0 hover:bg-hover">
-                  <td className="px-3 py-2 font-mono text-xs">{ticket.ticket}</td>
-                  <td className="px-3 py-2">{ticket.severity}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{ticket.status}</td>
-                  <td className="px-3 py-2">
-                    <Button variant="ghost" size="sm" onClick={() => setStarting(ticket)}>
-                      {intl.formatMessage({ id: "mae.dts.list.start" })}
-                    </Button>
-                  </td>
-                </tr>
+              {display.map((ticket) => (
+                <BoardRow
+                  key={ticket.ticket}
+                  ticket={ticket}
+                  shown={columnPrefs.shown}
+                  widths={columnPrefs.widths}
+                  selected={selected.includes(ticket.ticket)}
+                  liveIssue={liveMap.get(ticket.ticket) ?? null}
+                  resolvedModule={resolvedModuleOf(ticket.ticket, bindings, ticket.moduleId)}
+                  bindingFailMessage={bindingFail?.ticket === ticket.ticket ? bindingFail.message : null}
+                  bindingPending={bindingTicket === ticket.ticket}
+                  remark={remarks[ticket.ticket] ?? ""}
+                  tier={tiers[ticket.ticket] ?? null}
+                  modules={modules}
+                  onToggleSelect={() => {
+                    setSelected((current) => current.includes(ticket.ticket)
+                      ? current.filter((no) => no !== ticket.ticket)
+                      : [...current, ticket.ticket]);
+                  }}
+                  onEditRemark={() => {
+                    setRemarkDraft(remarks[ticket.ticket] ?? "");
+                    setRemarkEditing(ticket.ticket);
+                  }}
+                  onChangeModule={(moduleId) => void changeModule(ticket.ticket, moduleId)}
+                  onChangeTier={(tier) => {
+                    setTiers((current) => {
+                      const next = { ...current };
+                      if (tier === null) delete next[ticket.ticket];
+                      else next[ticket.ticket] = tier;
+                      return next;
+                    });
+                  }}
+                  onOpenIssueSession={props.onOpenIssueSession}
+                  onResizeStart={(key, event) => {
+                    event.preventDefault();
+                    setResizing({ key, startX: event.clientX, startWidth: columnPrefs.widths[key] });
+                  }}
+                />
               ))}
-              {tickets.length === 0 ? (
+              {display.length === 0 ? (
                 <tr>
-                  <td className="px-3 py-6 text-center text-muted-foreground" colSpan={4}>
-                    {intl.formatMessage({ id: "mae.dts.list.empty" })}
+                  <td className="px-3 py-6 text-center text-muted-foreground" colSpan={7}>
+                    {tickets === null
+                      ? intl.formatMessage({ id: "mae.dts.list.loading" })
+                      : remote.loading
+                        ? intl.formatMessage({ id: "mae.dts.list.remoteLooking" })
+                        : intl.formatMessage({ id: "mae.dts.list.empty" })}
                   </td>
                 </tr>
               ) : null}
@@ -197,62 +612,52 @@ export function DtsListPage(props: DtsListPageProps) {
         </div>
       </div>
 
-      {starting !== null ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="mae-dts-start-modal">
-          <div className="w-[420px] rounded-xl border border-card-border bg-card p-4 shadow-xl">
-            <h3 className="text-sm font-semibold">{intl.formatMessage({ id: "mae.dts.start.title" })}</h3>
-            <div className="mt-3 rounded-md border border-card-border bg-muted/40 px-2 py-1.5 font-mono text-xs">
-              {starting.ticket} · {starting.title}
-            </div>
-            <label className="mt-3 block text-muted-foreground text-xs">{intl.formatMessage({ id: "mae.dts.start.module" })}</label>
-            <select
-              className="mt-1 w-full rounded-md border border-input-border bg-background px-2 py-1.5 text-xs"
-              value={moduleName}
-              onChange={(event) => setModuleName(event.target.value)}
-              data-testid="mae-dts-start-module"
-            >
-              <option value="">{intl.formatMessage({ id: "mae.dts.start.modulePlaceholder" })}</option>
-              {modules.map((module) => (
-                <option key={module.moduleName} value={module.moduleName}>
-                  {module.moduleName}({module.repos.length})
-                </option>
-              ))}
-            </select>
-            <label className="mt-3 block text-muted-foreground text-xs">{intl.formatMessage({ id: "mae.dts.start.tier" })}</label>
-            <div className="mt-1 flex gap-1.5">
-              {TIERS.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  className={cn(
-                    "flex-1 rounded-lg border px-2 py-1.5 text-center text-xs transition-colors",
-                    tier === item.value ? "border-primary bg-primary/10" : "border-input-border hover:bg-hover",
-                  )}
-                  onClick={() => setTier(item.value)}
-                >
-                  {item.label}
-                  <small className="mt-0.5 block text-muted-foreground">{item.hint}</small>
-                </button>
-              ))}
-            </div>
-            <label className="mt-3 block text-muted-foreground text-xs">{intl.formatMessage({ id: "mae.dts.start.note" })}</label>
-            <textarea
-              className="mt-1 h-16 w-full rounded-md border border-input-border bg-background px-2 py-1 text-xs"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-            {error !== null ? <p className="mt-2 text-destructive text-xs">{error}</p> : null}
-            <div className="mt-3 flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setStarting(null)}>
-                {intl.formatMessage({ id: "mae.dts.start.cancel" })}
-              </Button>
-              <Button size="sm" disabled={moduleName === ""} data-testid="mae-dts-start-confirm" onClick={() => void start()}>
-                {intl.formatMessage({ id: "mae.dts.start.confirm" })}
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <Dialog open={remarkEditing !== null} onOpenChange={(open) => !open && setRemarkEditing(null)}>
+        <DialogContent className="w-[460px]">
+          <DialogHeader>
+            <DialogTitle>{intl.formatMessage({ id: "mae.dts.list.remarkEdit" })}</DialogTitle>
+            <DialogDescription>{remarkEditing ?? ""}</DialogDescription>
+          </DialogHeader>
+          <textarea
+            className="h-28 w-full rounded-md border border-input-border bg-background px-2 py-1 text-xs"
+            value={remarkDraft}
+            onChange={(event) => setRemarkDraft(event.target.value)}
+            data-testid="mae-dts-remark-input"
+          />
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setRemarkEditing(null)}>
+              {intl.formatMessage({ id: "mae.dts.remark.cancel" })}
+            </Button>
+            <Button size="sm" onClick={saveRemarkDraft} data-testid="mae-dts-remark-save">
+              {intl.formatMessage({ id: "mae.dts.remark.save" })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function safeStorage(): Storage | null {
+  try {
+    return globalThis.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function safeStorageGet(key: string): unknown {
+  try {
+    return globalThis.localStorage?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function safeStorageSet(key: string, value: string): void {
+  try {
+    globalThis.localStorage?.setItem(key, value);
+  } catch {
+    /* 隐私模式存不进就算了 */
+  }
 }
