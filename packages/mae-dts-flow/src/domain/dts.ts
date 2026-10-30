@@ -1,26 +1,32 @@
-/** DTS 单据领域类型与纯逻辑;字段口径对拍自华为网关(事实包 openaddr/ZCode#38)。 */
+/**
+ * DTS 单据领域类型;数据面同源自云平台(mae-flow-cloud /issues/dts*,规格 D15 修订 2026-10-30)。
+ * branch(版本→分支映射)与 moduleId(特性→模块带出)由云平台服务端单点计算下发,
+ * 本地不再自建映射解析(同源口径,yunine9/mae-flow-cloud#566)。
+ */
 
 export interface DtsTicketSummary {
-  /** 单号(dtsBizNo),唯一键。 */
+  /** 单号,唯一键。 */
   ticket: string;
-  /** 简要描述(briefDesc)。 */
+  /** 简要描述。 */
   title: string;
-  /** 状态名(dtsStatusName;fields 显式请求才返回)。 */
+  /** 状态名。 */
   status: string;
-  /** B 版本串(sProdBNoName,如 V100R025C10SPC010B009)。 */
+  /** C 版版本串(sProdCNoName 口径,mae-flow-cloud#564);缺席为空串。 */
   version: string;
-  /** 级别(serverityNoName——原始拼写就是 serverity)。 */
+  /** 级别。 */
   severity: string;
-  /** 提单人(creator)。 */
+  /** 提单人。 */
   submitter: string;
-  /** DTS 门户外链(outerLinkUrl)。 */
+  /** DTS 门户外链。 */
   url: string;
-  /** 特性名(sFeatureNoName;模块识别关键)。 */
-  featureName: string;
+  /** 分支映射结果(云平台按配置中心逐单补齐);未命中为 null=「未配置分支」禁发起。 */
+  branch: string | null;
+  /** 模块带出(云平台特性名强匹配);未命中为 null=「未匹配」发起前必选。 */
+  moduleId: string | null;
 }
 
 export interface DtsTicketDetail extends DtsTicketSummary {
-  /** 完整描述(详情接口 detailDesc 优先,退回 briefDesc)。 */
+  /** 完整描述(详情接口 description 优先,退回 title)。 */
   description: string;
 }
 
@@ -31,91 +37,40 @@ export function isActionable(status: string): boolean {
   return status === DTS_ACTIONABLE_STATUS;
 }
 
-/** 版本组:剥尾部 B 段(锚定串尾,SPC0101 不受影响);解析不出返回原串。 */
+/** 版本组:剥尾部 B 段(锚定串尾,SPC0101 不受影响);解析不出返回原串。C 版串无 B 段时原样返回。 */
 export function dtsVersionGroup(version: string): string {
   return version.replace(/B\d+$/, "");
 }
 
-/** 网关原始返回行(datas[] 条目)→ 领域摘要;空单号行过滤由调用方处理。 */
-export function mapDtsRow(row: Record<string, unknown>): DtsTicketSummary {
-  return {
-    ticket: String(row["dtsBizNo"] ?? ""),
-    title: String(row["briefDesc"] ?? ""),
-    status: String(row["dtsStatusName"] ?? ""),
-    version: String(row["sProdBNoName"] ?? ""),
-    severity: String(row["serverityNoName"] ?? ""),
-    submitter: String(row["creator"] ?? ""),
-    url: String(row["outerLinkUrl"] ?? ""),
-    featureName: String(row["sFeatureNoName"] ?? ""),
-  };
+/** 业务模块目录项(云平台 GET /business-modules 的消费子集)。 */
+export interface DtsModuleOption {
+  id: string;
+  name: string;
+  /** 模块绑定的仓库列表(prep_repo 的仓库集合来源)。 */
+  repositories: string[];
+}
+
+/** 单号→模块的人工改选映射条目(云平台 ADR-0056 口径)。 */
+export interface DtsBindingEntry {
+  moduleId: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+
+export type DtsBindingMap = Record<string, DtsBindingEntry>;
+
+/** 人员名单项(责任人选择器候选;GET /auth/people 消费子集)。 */
+export interface DtsPerson {
+  username: string;
+  displayName: string | null;
 }
 
 export class DtsFlowGatewayError extends Error {
   constructor(
     message: string,
-    readonly reason: "not_configured" | "unreachable" | "unparsable" | "not_found" = "unreachable",
+    readonly reason: "not_configured" | "unreachable" | "unparsable" | "not_found" | "not_authorized" = "unreachable",
   ) {
     super(message);
     this.name = "DtsFlowGatewayError";
   }
-}
-
-/**
- * MCP 工具结果两层形状的外层:content[].text 拼出 JSON 文本。
- * 解不动 fail-loud 带原文,不静默给空列表。
- */
-export function parseToolResultText(content: unknown): unknown {
-  if (!Array.isArray(content)) {
-    throw new DtsFlowGatewayError(`网关工具结果形状非法(无 content 数组)`, "unparsable");
-  }
-  const text = content
-    .map((item) => (item !== null && typeof item === "object" ? String((item as Record<string, unknown>)["text"] ?? "") : ""))
-    .join("");
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    throw new DtsFlowGatewayError(`网关工具结果不是合法 JSON: ${text.slice(0, 200)}`, "unparsable");
-  }
-}
-
-/** 内层信封 {status,result:{datas}} → datas 数组;非 success/缺 result fail-loud 带原文。 */
-export function extractDatas(envelope: unknown): Array<Record<string, unknown>> {
-  const record = envelope as Record<string, unknown> | null;
-  if (record === null || typeof record !== "object" || record["status"] !== "success") {
-    throw new DtsFlowGatewayError(`网关返回非 success: ${JSON.stringify(envelope)?.slice(0, 200)}`, "unparsable");
-  }
-  const result = record["result"] as Record<string, unknown> | undefined;
-  const datas = result?.["datas"];
-  if (!Array.isArray(datas)) {
-    throw new DtsFlowGatewayError(`网关返回缺 result.datas: ${JSON.stringify(envelope)?.slice(0, 200)}`, "unparsable");
-  }
-  return datas as Array<Record<string, unknown>>;
-}
-
-/**
- * 拉单 listByVersionAndHead 的 14 个位置参数(arg0-arg13,顺序敏感——华为网关丢弃参数名)。
- * 查本人名下走 otherConditions.currentHandler=EqualName,不是 filterId。
- */
-export function buildListArgs(account: string): unknown[] {
-  return [
-    1, // arg0 pageIndex
-    200, // arg1 pageSize(最大 200)
-    "", // arg2 pbiId
-    "PBI", // arg3 productType
-    "", // arg4 filterId(未用;名下过滤走 arg12)
-    "", // arg5 workBenchViewId
-    "", // arg6 brief
-    [], // arg7 dtsNos
-    [], // arg8 dtsStatus
-    [], // arg9 severity
-    false, // arg10 convertAttachment
-    ["sFeatureNoName"], // arg11 fields(不显式请求则字段不返回)
-    [{ fieldName: "currentHandler", operator: "EqualName", value: [account] }], // arg12 otherConditions
-    [], // arg13 orderBy
-  ];
-}
-
-/** 查单 batchQueryTicket 的位置参数;状态名/特性名必须显式请求。 */
-export function buildDetailArgs(ticket: string): unknown[] {
-  return [[ticket], ["sFeatureNoName", "dtsStatusName"], false];
 }

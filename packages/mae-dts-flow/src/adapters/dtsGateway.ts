@@ -1,187 +1,242 @@
-/** DTS 网关:mock 与真实 MCP 网关同接口;对接事实对拍记录 openaddr/ZCode#38。 */
-import { promises as fs } from "node:fs";
-
+/**
+ * DTS 数据客户端:mock 与云平台同源实现同接口。
+ * 真实后端=mae-flow-cloud(规格 D15 修订 2026-10-30):拉单/详情响应由平台服务端
+ * 单点补齐 branch+module,本地零映射逻辑;免登录依据 yunine9/mae-flow-cloud#566。
+ */
 import {
+  type DtsBindingMap,
+  type DtsModuleOption,
+  type DtsPerson,
   type DtsTicketDetail,
   type DtsTicketSummary,
   DtsFlowGatewayError,
-  buildDetailArgs,
-  buildListArgs,
-  extractDatas,
-  mapDtsRow,
-  parseToolResultText,
 } from "../domain/dts.js";
-import { MOCK_TICKETS } from "./dtsMockData.js";
+import { MOCK_BINDINGS, MOCK_MODULES, MOCK_PEOPLE, MOCK_TICKETS } from "./dtsMockData.js";
 
 export interface DtsGateway {
   /** mock 标记:UI 据此亮 DEV 横幅。 */
   readonly mock: boolean;
-  /** 名下单列表(网关侧按账号过滤;返回含全部状态,可发起过滤在领域层)。 */
+  /** 名下单列表(按账号过滤;返回含全部状态,可发起过滤在领域层)。 */
   listByOwner(account: string): Promise<DtsTicketSummary[]>;
   /** 查单;查无此单 fail-loud(不静默)。 */
-  getTicket(account: string, ticket: string): Promise<DtsTicketDetail>;
+  getTicket(ticket: string): Promise<DtsTicketDetail>;
+  /** 业务模块目录(所属模块列候选)。 */
+  listModules(): Promise<DtsModuleOption[]>;
+  /** 单号→模块人工改选映射(团队共享,优先于带出值)。 */
+  getBindings(): Promise<DtsBindingMap>;
+  /** 人工改选落账(受平台 #566 放行门控;未放行 401 → not_authorized)。 */
+  putBinding(ticket: string, moduleId: string | null, updatedBy: string): Promise<void>;
+  /** 人员名单(责任人选择器候选;未放行 → not_authorized,UI 退化手输工号)。 */
+  listPeople(): Promise<DtsPerson[]>;
 }
 
 export interface DtsGatewayDeps {
   fetch: typeof fetch;
-  /** x-auth-token 读取器:每次请求现取现用(文件轮换免重启);空串则不设头。 */
-  readToken: () => Promise<string>;
 }
 
-const PROTOCOL_VERSION = "2025-03-26";
-const CLIENT_INFO = { name: "zcode-mae-dts-flow", version: "1" };
+const REQUEST_TIMEOUT_MS = 30_000;
 
-/** 真实网关:MCP(JSON-RPC 2.0 over HTTP POST),响应兼容 json/SSE 两形态。 */
-export class McpDtsGateway implements DtsGateway {
+/** 云平台网关:匿名 HTTP(免登录允许清单 #566 放行前 401 显形为 not_authorized)。 */
+export class CloudPlatformGateway implements DtsGateway {
   readonly mock = false;
-  private sessionId: string | null = null;
 
   constructor(
-    private readonly url: string,
+    private readonly baseUrl: string,
     private readonly deps: DtsGatewayDeps,
   ) {}
 
   async listByOwner(account: string): Promise<DtsTicketSummary[]> {
-    const envelope = await this.callTool("listByVersionAndHead", buildListArgs(account));
-    return extractDatas(envelope)
-      .map(mapDtsRow)
-      .filter((row) => row.ticket.trim().length > 0);
+    const body = await this.getJson<{ tickets?: unknown }>(`/issues/dts?owner=${encodeURIComponent(account)}`);
+    if (!Array.isArray(body.tickets)) {
+      throw new DtsFlowGatewayError(`云平台拉单响应缺 tickets 数组`, "unparsable");
+    }
+    return (body.tickets as Array<Record<string, unknown>>).map(mapCloudBrief).filter((row) => row.ticket.trim().length > 0);
   }
 
-  async getTicket(account: string, ticket: string): Promise<DtsTicketDetail> {
-    const envelope = await this.callTool("batchQueryTicket", buildDetailArgs(ticket));
-    const rows = extractDatas(envelope);
-    const row = rows[0];
-    if (row === undefined) {
+  async getTicket(ticket: string): Promise<DtsTicketDetail> {
+    const body = await this.getJson<Record<string, unknown>>(`/issues/dts/${encodeURIComponent(ticket)}`);
+    const summary = mapCloudBrief(body);
+    if (summary.ticket.trim().length === 0) {
       throw new DtsFlowGatewayError(`查无此单: ${ticket}`, "not_found");
     }
-    const summary = mapDtsRow(row);
-    const detailDesc = String(row["detailDesc"] ?? "");
-    return { ...summary, title: summary.title || `DTS ${ticket}`, description: detailDesc || summary.title };
+    const description = String(body["description"] ?? "");
+    return { ...summary, title: summary.title || `DTS ${ticket}`, description: description || summary.title };
   }
 
-  /** 单工具调用:带会话握手;会话过期(404/expired)重建握手重试一次。 */
-  private async callTool(toolName: string, args: unknown[]): Promise<unknown> {
-    await this.ensureSession();
-    try {
-      return await this.callToolOnce(toolName, args);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!/404|session|expired|not found/i.test(message)) throw error;
-      this.sessionId = null;
-      await this.ensureSession();
-      return this.callToolOnce(toolName, args);
+  async listModules(): Promise<DtsModuleOption[]> {
+    const body = await this.getJson<{ modules?: unknown }>(`/business-modules`);
+    if (!Array.isArray(body.modules)) {
+      throw new DtsFlowGatewayError(`云平台模块目录响应缺 modules 数组`, "unparsable");
     }
+    return (body.modules as Array<Record<string, unknown>>)
+      .filter((module) => String(module["status"] ?? "active") === "active")
+      .map((module) => ({
+        id: String(module["id"] ?? ""),
+        name: String(module["name"] ?? ""),
+        repositories: Array.isArray(module["repositories"]) ? module["repositories"].map(String) : [],
+      }))
+      .filter((module) => module.id.trim().length > 0);
   }
 
-  private async ensureSession(): Promise<void> {
-    if (this.sessionId !== null) return;
-    const initResult = {
-      jsonrpc: "2.0",
-      id: 0,
-      method: "initialize",
-      params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: CLIENT_INFO },
-    };
-    const response = await this.post(initResult);
-    this.sessionId = response.headers.get("mcp-session-id");
-    // notifications/initialized:失败容忍(部分网关不回包也不报错)。
-    await this.post({ jsonrpc: "2.0", method: "notifications/initialized" }).catch(() => undefined);
+  async getBindings(): Promise<DtsBindingMap> {
+    const body = await this.getJson<{ bindings?: unknown }>(`/issues/dts-bindings`);
+    const bindings = body.bindings;
+    if (bindings === undefined || bindings === null || typeof bindings !== "object") {
+      return {};
+    }
+    const map: DtsBindingMap = {};
+    for (const [ticket, entry] of Object.entries(bindings as Record<string, unknown>)) {
+      const record = entry as Record<string, unknown> | null;
+      if (record === null || typeof record !== "object") continue;
+      const moduleId = String(record["module_id"] ?? "");
+      if (!moduleId.trim()) continue;
+      map[ticket] = {
+        moduleId,
+        updatedBy: String(record["updated_by"] ?? ""),
+        updatedAt: String(record["updated_at"] ?? ""),
+      };
+    }
+    return map;
   }
 
-  private async callToolOnce(toolName: string, args: unknown[]): Promise<unknown> {
-    const response = await this.post({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "tools/call",
-      params: { name: toolName, arguments: args },
+  async putBinding(ticket: string, moduleId: string | null, updatedBy: string): Promise<void> {
+    const response = await this.request("PUT", `/issues/dts-bindings/${encodeURIComponent(ticket)}`, {
+      module_id: moduleId,
+      updated_by: updatedBy,
     });
-    const bodyText = await response.text();
-    let rpcResult: Record<string, unknown>;
-    try {
-      const parsed = JSON.parse(this.unwrapSse(bodyText)) as Record<string, unknown>;
-      rpcResult = (parsed["result"] ?? parsed) as Record<string, unknown>;
-    } catch {
-      throw new DtsFlowGatewayError(`网关响应不是合法 JSON-RPC: ${bodyText.slice(0, 200)}`, "unparsable");
+    if (!response.ok) {
+      throw await this.errorFor(response, "绑定落账失败");
     }
-    if (response.status >= 400 || rpcResult["error"] !== undefined) {
-      const error = rpcResult["error"] as Record<string, unknown> | undefined;
-      const message = String(error?.["message"] ?? `HTTP ${String(response.status)}`);
-      throw new DtsFlowGatewayError(`网关工具调用失败: ${message}`, "unreachable");
-    }
-    return parseToolResultText(rpcResult["content"]);
   }
 
-  private async post(body: Record<string, unknown>): Promise<Response> {
-    const token = await this.deps.readToken();
-    const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json, text/event-stream" };
-    if (token) headers["x-auth-token"] = token;
-    if (this.sessionId !== null) headers["mcp-session-id"] = this.sessionId;
+  async listPeople(): Promise<DtsPerson[]> {
+    const body = await this.getJson<unknown>(`/auth/people`);
+    if (!Array.isArray(body)) {
+      throw new DtsFlowGatewayError(`云平台人员名单响应不是数组`, "unparsable");
+    }
+    return (body as Array<Record<string, unknown>>)
+      .map((row) => ({
+        username: String(row["username"] ?? ""),
+        displayName: row["display_name"] === undefined || row["display_name"] === null ? null : String(row["display_name"]),
+      }))
+      .filter((person) => person.username.trim().length > 0);
+  }
+
+  private async getJson<T>(path: string): Promise<T> {
+    const response = await this.request("GET", path);
+    if (!response.ok) {
+      throw await this.errorFor(response, "云平台请求失败");
+    }
+    try {
+      return (await response.json()) as T;
+    } catch {
+      throw new DtsFlowGatewayError("云平台响应不是合法 JSON", "unparsable");
+    }
+  }
+
+  private async request(method: string, path: string, body?: unknown): Promise<Response> {
     let response: Response;
     try {
-      response = await this.deps.fetch(this.url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
+      response = await this.deps.fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers: body === undefined ? undefined : { "content-type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
     } catch (error) {
-      throw new DtsFlowGatewayError(`DTS 网关不可达(${String(error)})`, "unreachable");
+      throw new DtsFlowGatewayError(`云平台不可达(${String(error)})`, "unreachable");
     }
-    const sessionId = response.headers.get("mcp-session-id");
-    if (sessionId !== null) this.sessionId = sessionId;
     return response;
   }
 
-  /** SSE 形态:取最后一个 data: 行的载荷;json 形态原样返回。 */
-  private unwrapSse(body: string): string {
-    if (!body.includes("data:")) return body;
-    const dataLines = body
-      .split("\n")
-      .filter((line) => line.startsWith("data:"))
-      .map((line) => line.slice(5).trim());
-    return dataLines.at(-1) ?? body;
+  private async errorFor(response: Response, prefix: string): Promise<DtsFlowGatewayError> {
+    const text = await response.text().catch(() => "");
+    let detail = text.slice(0, 200);
+    try {
+      const parsed = JSON.parse(text) as Record<string, unknown>;
+      if (typeof parsed["error"] === "string") detail = parsed["error"];
+    } catch {
+      /* 非 JSON 响应,保留原文截断 */
+    }
+    if (response.status === 401 || response.status === 403) {
+      return new DtsFlowGatewayError(
+        `${prefix}:云平台返回 ${String(response.status)}——免登录允许清单未放行,等待 yunine9/mae-flow-cloud#566;期间请用 mock 模式`,
+        "not_authorized",
+      );
+    }
+    if (response.status === 404) {
+      return new DtsFlowGatewayError(`${prefix}:资源不存在(404)`, "not_found");
+    }
+    return new DtsFlowGatewayError(`${prefix}:HTTP ${String(response.status)} ${detail}`, "unreachable");
   }
 }
 
-/** mock 网关:罐头单据,确定性轮转(按账号哈希偏移,人人有单);查无此单 fail-loud。 */
+/** 平台 DtsTicketBrief(蛇形)→ 领域摘要;version 缺席归空串(C 版口径,缺席不造值)。 */
+function mapCloudBrief(row: Record<string, unknown>): DtsTicketSummary {
+  return {
+    ticket: String(row["ticket"] ?? ""),
+    title: String(row["title"] ?? ""),
+    status: String(row["status"] ?? ""),
+    version: String(row["version"] ?? ""),
+    severity: String(row["severity"] ?? ""),
+    submitter: String(row["submitter"] ?? ""),
+    url: String(row["url"] ?? ""),
+    branch: row["branch"] === undefined || row["branch"] === null ? null : String(row["branch"]),
+    moduleId: row["module_id"] === undefined || row["module_id"] === null ? null : String(row["module_id"]),
+  };
+}
+
+/** mock 网关:罐头数据,单据按账号哈希轮转(人人有单);查无此单 fail-loud。 */
 export class MockDtsGateway implements DtsGateway {
   readonly mock = true;
 
   async listByOwner(account: string): Promise<DtsTicketSummary[]> {
     const offset = [...account].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % MOCK_TICKETS.length;
-    return MOCK_TICKETS.map((_, index) => MOCK_TICKETS[(index + offset) % MOCK_TICKETS.length] as DtsTicketSummary);
+    return MOCK_TICKETS.map((_, index) => MOCK_TICKETS[(index + offset) % MOCK_TICKETS.length] as DtsTicketDetail);
   }
 
-  async getTicket(_account: string, ticket: string): Promise<DtsTicketDetail> {
+  async getTicket(ticket: string): Promise<DtsTicketDetail> {
     const found = MOCK_TICKETS.find((item) => item.ticket === ticket);
     if (!found) {
       throw new DtsFlowGatewayError(`查无此单: ${ticket}`, "not_found");
     }
     return found;
   }
+
+  async listModules(): Promise<DtsModuleOption[]> {
+    return MOCK_MODULES;
+  }
+
+  async getBindings(): Promise<DtsBindingMap> {
+    return MOCK_BINDINGS;
+  }
+
+  async putBinding(ticket: string, moduleId: string | null, updatedBy: string): Promise<void> {
+    const entry = MOCK_BINDINGS[ticket];
+    if (entry === undefined && moduleId !== null) {
+      MOCK_BINDINGS[ticket] = { moduleId, updatedBy, updatedAt: new Date().toISOString() };
+    }
+  }
+
+  async listPeople(): Promise<DtsPerson[]> {
+    return MOCK_PEOPLE;
+  }
 }
 
 export interface CreateGatewayInput {
-  dtsGatewayUrl: string | null;
-  dtsTokenPath: string;
+  /** mae-flow-cloud 地址;null=未配置(非 mock 下 fail-loud,如实报不静默降级)。 */
+  cloudBaseUrl: string | null;
   mock: boolean;
 }
 
-/** 网关工厂:mock 开关优先;真网关未配置地址 fail-loud(如实报,不静默降级)。 */
+/** 网关工厂:mock 开关优先;云平台地址未配置 fail-loud。 */
 export function createDtsGateway(input: CreateGatewayInput, deps: DtsGatewayDeps): DtsGateway {
   if (input.mock) return new MockDtsGateway();
-  if (input.dtsGatewayUrl === null) {
+  if (input.cloudBaseUrl === null) {
     throw new DtsFlowGatewayError(
-      "DTS 网关未配置:写入配置 dtsGatewayUrl 与 dtsTokenPath(token 文件,权限 600),或改用 mock 模式",
+      "云平台未配置:写入配置 cloudBaseUrl(mae-flow-cloud 地址 http://ip:端口),或改用 mock 模式",
       "not_configured",
     );
   }
-  return new McpDtsGateway(input.dtsGatewayUrl, deps);
-}
-
-/** token 文件读取器:每次现读(轮换免重启);读失败降级为空串(无认证头,让网关 401 显形)。 */
-export function tokenFileReader(tokenPath: string): () => Promise<string> {
-  return async () => {
-    try {
-      const content = (await fs.readFile(tokenPath, "utf8")).trim();
-      return content;
-    } catch {
-      return "";
-    }
-  };
+  return new CloudPlatformGateway(input.cloudBaseUrl, deps);
 }

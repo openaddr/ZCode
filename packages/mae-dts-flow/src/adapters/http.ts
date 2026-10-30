@@ -66,21 +66,21 @@ async function handle(
     case "GET /api/deps":
       respondJson(response, 200, { dependencies: await service.probeDependencies() });
       return;
-    case "GET /api/modules": {
-      const resolved = await service.refreshModuleBindings();
-      respondJson(response, 200, {
-        source: resolved.bindings.source,
-        degraded: resolved.degraded,
-        degradedReason: resolved.degradedReason,
-        modules: resolved.bindings.modules,
-      });
+    case "GET /api/modules":
+      respondJson(response, 200, { modules: await service.listModules() });
       return;
-    }
+    case "GET /api/dts/bindings":
+      respondJson(response, 200, { bindings: await service.getBindings() });
+      return;
+    case "GET /api/dts/people":
+      respondJson(response, 200, { people: await service.listPeople() });
+      return;
     case "GET /api/issues":
       respondJson(response, 200, { issues: await service.listIssues() });
       return;
     case "GET /api/dts/tickets": {
-      const tickets = await service.listTickets();
+      const ownerParam = url.searchParams.get("owner");
+      const tickets = await service.listTickets(ownerParam === null || ownerParam.trim() === "" ? undefined : ownerParam.trim());
       const actionable = tickets.filter((ticket) => ticket.actionable);
       respondJson(response, 200, {
         mock: service.config.mock,
@@ -136,6 +136,16 @@ async function handle(
     respondJson(response, 200, await service.getTicket(decodeURIComponent(ticketMatch[1] as string)));
     return;
   }
+  const bindingMatch = /^\/api\/dts\/bindings\/([^/]+)$/.exec(url.pathname);
+  if (request.method === "PUT" && bindingMatch !== null) {
+    const body = (await readJsonBody(request)) as { module_id?: unknown };
+    const moduleId = body.module_id === undefined || body.module_id === null || String(body.module_id).trim() === ""
+      ? null
+      : String(body.module_id).trim();
+    await service.putBinding({ ticket: decodeURIComponent(bindingMatch[1] as string), moduleId });
+    respondJson(response, 200, { ok: true });
+    return;
+  }
   const issueMatch = /^\/api\/issues\/([^/]+)\/events$/.exec(url.pathname);
   if (request.method === "GET" && issueMatch !== null) {
     const ticket = decodeURIComponent(issueMatch[1] as string);
@@ -169,7 +179,7 @@ async function readJsonBody(request: import("node:http").IncomingMessage): Promi
 function corsHeaders(): Record<string, string> {
   return {
     "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-methods": "GET,POST,PUT,OPTIONS",
     "access-control-allow-headers": "content-type",
   };
 }

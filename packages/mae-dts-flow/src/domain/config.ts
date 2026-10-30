@@ -1,20 +1,16 @@
 /** 服务配置的领域装配:纯逻辑,不碰文件系统;文件读取在 adapters/configLoader。 */
 
 export interface DtsFlowConfig {
-  /** 服务数据根(台账、事件流、本地兜底配置都住这里,在问题工作区之外)。 */
+  /** 服务数据根(台账、事件流都住这里,在问题工作区之外)。 */
   dataDir: string;
   /** 问题工作区根(每单一个子目录:repo/ 克隆、分析报告、物化技能)。 */
   issuesRoot: string;
   /** 依赖组件目录(codehubcli 等;缺席不阻启动,调用时 fail-loud)。 */
   binDir: string;
-  /** 工号:分支名 master_<工号>_<单号> 的因子;mock 模式缺省 dev。 */
+  /** 工号:云平台拉单 owner 默认值 + 分支名 master_<工号>_<单号> 的因子;mock 模式缺省 dev。 */
   employeeId: string;
-  /** mae-flow-cloud 地址(模块绑定云端层);null=只用本地兜底。 */
+  /** mae-flow-cloud 地址(数据面同源唯一后端);null=未配置,非 mock 下 fail-loud。 */
   cloudBaseUrl: string | null;
-  /** DTS MCP 网关地址(#38 对拍口径);null=未配置,拉单 fail-loud。 */
-  dtsGatewayUrl: string | null;
-  /** x-auth-token 文件路径;只存路径,内容永不进配置摘要。 */
-  dtsTokenPath: string;
   /** HTTP 面端口。 */
   httpPort: number;
   /** mock 模式:罐头单据,外网开发/演示用。 */
@@ -31,11 +27,12 @@ export const KNOWN_CONFIG_KEYS: readonly string[] = [
   "binDir",
   "employeeId",
   "cloudBaseUrl",
-  "dtsGatewayUrl",
-  "dtsTokenPath",
   "httpPort",
   "mock",
 ];
+
+/** 直连 DTS 网关时代的退役键(2026-10-30 同源切换):旧配置文件里遇到容忍不炸,值被忽略。 */
+export const DEPRECATED_CONFIG_KEYS: readonly string[] = ["dtsGatewayUrl", "dtsTokenPath"];
 
 export interface AssembleConfigInput {
   /** 配置文件解析出的键值;null=无配置文件。 */
@@ -46,11 +43,12 @@ export interface AssembleConfigInput {
 
 /**
  * 纯装配:缺省值 ← 配置文件 ← mock 兜底。
- * 未知键拒绝(防拼写错静默失效);employeeId 非 mock 缺失即抛;非法值 fail-loud。
+ * 未知键拒绝(防拼写错静默失效);退役键容忍忽略;employeeId 非 mock 缺失即抛;非法值 fail-loud。
  */
 export function assembleConfig(input: AssembleConfigInput): DtsFlowConfig {
   const fileValues = input.fileValues ?? {};
   for (const key of Object.keys(fileValues)) {
+    if (DEPRECATED_CONFIG_KEYS.includes(key)) continue;
     if (!KNOWN_CONFIG_KEYS.includes(key)) {
       throw new DtsFlowConfigError(
         `配置文件含未知字段「${key}」(已知: ${KNOWN_CONFIG_KEYS.join(", ")})`,
@@ -63,7 +61,7 @@ export function assembleConfig(input: AssembleConfigInput): DtsFlowConfig {
   const mock = fileValues["mock"] === true;
   const employeeId = pickString(fileValues, "employeeId") ?? (mock ? "dev" : "");
   if (!employeeId) {
-    throw new DtsFlowConfigError("配置缺少 employeeId(工号,分支名因子);写入配置文件或改用 mock 模式");
+    throw new DtsFlowConfigError("配置缺少 employeeId(工号,拉单 owner 与分支名因子);写入配置文件或改用 mock 模式");
   }
 
   return {
@@ -72,8 +70,6 @@ export function assembleConfig(input: AssembleConfigInput): DtsFlowConfig {
     binDir: pickString(fileValues, "binDir") ?? joinPath(input.maeRoot, "bin"),
     employeeId,
     cloudBaseUrl: assertHttpUrlIfPresent(pickString(fileValues, "cloudBaseUrl"), "cloudBaseUrl"),
-    dtsGatewayUrl: assertHttpUrlIfPresent(pickString(fileValues, "dtsGatewayUrl"), "dtsGatewayUrl"),
-    dtsTokenPath: pickString(fileValues, "dtsTokenPath") ?? joinPath(dataDir, "mcp-token"),
     httpPort: pickPort(fileValues),
     mock,
     pipelineBudgetMinutes: pickBudgetMinutes(fileValues),

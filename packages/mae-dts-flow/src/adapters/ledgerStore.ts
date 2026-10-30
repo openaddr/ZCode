@@ -28,9 +28,16 @@ export async function createIssueLedger(
   const now = (input.now ?? (() => new Date()))().toISOString();
   const dir = issueDir(dataDir, input.ticket);
   const file = path.join(dir, "ledger.json");
-  const existing = await fs.stat(file).catch(() => null);
-  if (existing) {
-    throw new IssueLedgerError(`单据 ${input.ticket} 的台账已存在(同单同账号去重口径)`);
+  const existing = await loadIssueLedger(dataDir, input.ticket).catch(() => null);
+  if (existing !== null && existing.closedAt === null && !existing.archived) {
+    throw new IssueLedgerError(`单据 ${input.ticket} 有进行中的问题会话,不可重复发起(对齐云端同单查重口径)`);
+  }
+  // 收口/归档后的再发起:旧一轮台账就地留档(ledger.prev-N-<ts>.json,list 不拾取),新一轮从零开。
+  let rounds = 0;
+  if (existing !== null) {
+    const previousRounds = (await fs.readdir(dir).catch(() => [] as string[])).filter((name) => name.startsWith("ledger.prev-"));
+    await fs.rename(file, path.join(dir, `ledger.prev-${previousRounds.length + 1}-${now.replaceAll(":", "")}.json`));
+    rounds = existing.rounds + 1;
   }
   await fs.mkdir(dir, { recursive: true });
   const ledger: IssueLedger = {
@@ -39,22 +46,24 @@ export async function createIssueLedger(
     interventionTier: input.interventionTier ?? DEFAULT_INTERVENTION_TIER,
     stage: "dts_info",
     stages: emptyStages(),
-    rounds: 0,
+    rounds,
     analysisGate: null,
     mrDeclarations: [],
     mrAccounts: [],
     mrWatch: null,
     closedAt: null,
     archived: false,
-    createdAt: now,
+    createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   };
   await writeLedgerAtomic(file, ledger);
-  await appendIssueEvent(dataDir, input.ticket, {
-    ts: now,
-    kind: "issue_created",
-    payload: { interventionTier: ledger.interventionTier },
-  });
+  await appendIssueEvent(dataDir, input.ticket, existing === null
+    ? { ts: now, kind: "issue_created", payload: { interventionTier: ledger.interventionTier } }
+    : {
+        ts: now,
+        kind: "issue_reinitiated",
+        payload: { interventionTier: ledger.interventionTier, previousClosedAt: existing.closedAt, round: rounds },
+      });
   return ledger;
 }
 

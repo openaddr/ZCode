@@ -1,8 +1,13 @@
 import type { DtsFlowConfig } from "../domain/config.js";
 import type { DependencyProbe } from "../domain/depsProbe.js";
-import type { DtsTicketDetail, DtsTicketSummary } from "../domain/dts.js";
+import type {
+  DtsBindingMap,
+  DtsModuleOption,
+  DtsPerson,
+  DtsTicketDetail,
+  DtsTicketSummary,
+} from "../domain/dts.js";
 import type { IssueEvent, IssueLedger, InterventionTier } from "../domain/ledger.js";
-import type { ResolvedModuleBindings } from "../domain/moduleBindings.js";
 import type { InitWorkspaceResult } from "../domain/issueFlow.js";
 
 /** 一期已知依赖组件(UI 依赖面板与调用期守卫共用这份清单)。 */
@@ -21,25 +26,27 @@ export interface DtsFlowServiceDeps {
  */
 export interface DtsFlowService {
   readonly config: DtsFlowConfig;
-  /** 配置摘要:绝不包含凭据内容(token 只报路径与在场性)。 */
   configSummary(): Promise<{
     dataDir: string;
     issuesRoot: string;
     binDir: string;
     employeeId: string;
     cloudBaseUrl: string | null;
-    dtsGatewayUrl: string | null;
-    dtsTokenPath: string;
-    dtsTokenPresent: boolean;
     httpPort: number;
     mock: boolean;
   }>;
   probeDependencies(): Promise<DependencyProbe[]>;
-  refreshModuleBindings(): Promise<ResolvedModuleBindings>;
-  getCachedModuleBindings(): ResolvedModuleBindings | null;
-  /** 名下 DTS 单(全部状态,actionable 标记可发起;调用期未配置网关 fail-loud)。 */
-  listTickets(): Promise<Array<DtsTicketSummary & { actionable: boolean }>>;
+  /** 名下 DTS 单(全部状态,actionable 标记可发起;owner 缺省=配置工号;未配置/未放行 fail-loud)。 */
+  listTickets(owner?: string): Promise<Array<DtsTicketSummary & { actionable: boolean }>>;
   getTicket(ticket: string): Promise<DtsTicketDetail>;
+  /** 业务模块目录(所属模块列候选)。 */
+  listModules(): Promise<DtsModuleOption[]>;
+  /** 单号→模块人工改选映射(团队共享)。 */
+  getBindings(): Promise<DtsBindingMap>;
+  /** 改选落账(受平台 #566 放行门控)。 */
+  putBinding(input: { ticket: string; moduleId: string | null }): Promise<void>;
+  /** 人员名单(责任人选择器候选;未放行 fail-loud,UI 退化手输工号)。 */
+  listPeople(): Promise<DtsPerson[]>;
   createIssue(input: { ticket: string; interventionTier?: InterventionTier }): Promise<IssueLedger>;
   /** 发起动作:台账+工作区(repo/、报告模板、项目级 MCP 配置、物化技能)+开场词,一口气(#40 决议 2)。 */
   initIssue(input: {
