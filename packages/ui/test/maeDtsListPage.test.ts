@@ -79,7 +79,7 @@ function routeFetch(overrides: Record<string, { status: number; body: unknown }>
 function renderBoard(overrides: Record<string, { status: number; body: unknown }> = {}) {
   const fetchMock = vi.fn(routeFetch(overrides));
   vi.stubGlobal("fetch", fetchMock);
-  const onIssueStarted = vi.fn();
+  const onIssueStarted = vi.fn(async () => ({ ok: true, sessionId: "session-1" }));
   const onSwitchToChat = vi.fn();
   const onOpenIssueSession = vi.fn();
   render(
@@ -148,7 +148,34 @@ it("版本组默认勾选最高组;未映射红条列组名", async () => {
   expect(screen.getByTestId("mae-dts-version-filter").textContent).toContain("V100R026C10");
 });
 
-it("批量发起:逐张 POST,成功切聊天并开草稿,失败保勾选", async () => {
+it("批量发起:逐张 POST+启动器,发起即开跑,成功切聊天并清勾选", async () => {
+  const fetchMock = vi.fn((async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/api/issues") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { ticket: string };
+      return new Response(JSON.stringify({ ledger: {}, workspace: { workspacePath: `C:/ws/${body.ticket}` }, openingBrief: "开场词" }), { status: 201 });
+    }
+    return routeFetch()(input, init);
+  }) as unknown as typeof fetch);
+  vi.stubGlobal("fetch", fetchMock);
+  // 发起即开跑(#68):回调带开场词,返回 ok 才算成功(清勾选+切聊天)。
+  const onIssueStarted = vi.fn(async () => ({ ok: true, sessionId: "session-1" }));
+  const onSwitchToChat = vi.fn();
+  render(createElement(DtsListPage, { onIssueStarted, onSwitchToChat }));
+  await screen.findByText("DTS-2026-1002");
+
+  fireEvent.click(rowCheckbox("DTS-2026-1009"));
+  fireEvent.click(rowCheckbox("DTS-2026-1010"));
+  fireEvent.click(screen.getByTestId("mae-dts-start"));
+
+  await waitFor(() => expect(onIssueStarted).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(onSwitchToChat).toHaveBeenCalledTimes(1));
+  expect(onIssueStarted.mock.calls[0]?.[1]).toContain("开场词");
+  expect(rowCheckbox("DTS-2026-1009").getAttribute("aria-checked")).toBe("false");
+  expect(rowCheckbox("DTS-2026-1010").getAttribute("aria-checked")).toBe("false");
+});
+
+it("批量发起:会话被拒计失败保勾选,POST 失败同样保勾选", async () => {
   const fetchMock = vi.fn((async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.endsWith("/api/issues") && init?.method === "POST") {
@@ -161,7 +188,8 @@ it("批量发起:逐张 POST,成功切聊天并开草稿,失败保勾选", async
     return routeFetch()(input, init);
   }) as unknown as typeof fetch);
   vi.stubGlobal("fetch", fetchMock);
-  const onIssueStarted = vi.fn();
+  // 1009:服务端建单成功但会话启动被拒 → 失败;1010:POST 400 → 失败。
+  const onIssueStarted = vi.fn(async () => ({ ok: false, message: "sendText rejected" }));
   const onSwitchToChat = vi.fn();
   render(createElement(DtsListPage, { onIssueStarted, onSwitchToChat }));
   await screen.findByText("DTS-2026-1002");
@@ -170,12 +198,13 @@ it("批量发起:逐张 POST,成功切聊天并开草稿,失败保勾选", async
   fireEvent.click(rowCheckbox("DTS-2026-1010"));
   fireEvent.click(screen.getByTestId("mae-dts-start"));
 
-  await waitFor(() => expect(onSwitchToChat).toHaveBeenCalledTimes(1));
-  expect(onIssueStarted).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(onIssueStarted).toHaveBeenCalledTimes(1));
   expect(onIssueStarted.mock.calls[0]?.[0]).toBe("C:/ws/DTS-2026-1009");
-  // 失败单保留勾选,成功单移出勾选
+  await waitFor(() => expect(screen.getByTestId("mae-dts-start").getAttribute("disabled")).toBeNull());
+  // 全部失败:不切聊天,勾选原样保留
+  expect(onSwitchToChat).not.toHaveBeenCalled();
+  expect(rowCheckbox("DTS-2026-1009").getAttribute("aria-checked")).toBe("true");
   expect(rowCheckbox("DTS-2026-1010").getAttribute("aria-checked")).toBe("true");
-  expect(rowCheckbox("DTS-2026-1009").getAttribute("aria-checked")).toBe("false");
 });
 
 it("附加信息行内编辑:保存进 localStorage 草稿", async () => {
