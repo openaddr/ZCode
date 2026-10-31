@@ -24,6 +24,8 @@ export interface InitWorkspaceInput {
   /** 服务自身 stdio 启动命令(写进项目级 .zcode/config.json,会话自动挂 MCP 面)。 */
   selfCommand: string;
   selfArgs: string[];
+  /** 打包态 electron 充当 node 所需的环境注入(缺省不带 env 键)。 */
+  selfEnv?: Record<string, string>;
 }
 
 export async function initIssueWorkspace(input: InitWorkspaceInput): Promise<InitWorkspaceResult> {
@@ -49,7 +51,7 @@ export async function initIssueWorkspace(input: InitWorkspaceInput): Promise<Ini
 
   const mcpConfigPath = path.join(workspacePath, ".zcode", "config.json");
   await fs.mkdir(path.dirname(mcpConfigPath), { recursive: true });
-  await writeFileIfAbsent(mcpConfigPath, buildMcpConfigJson(input.selfCommand, input.selfArgs));
+  await writeFileIfAbsent(mcpConfigPath, buildMcpConfigJson(input.selfCommand, input.selfArgs, input.selfEnv));
 
   return { workspacePath, analysisReportPath, skillPath, mcpConfigPath };
 }

@@ -73,8 +73,14 @@ export function expectedBranch(employeeId: string, ticket: string): string {
   return `master_${employeeId}_${ticket}`;
 }
 
-export function buildMcpConfigJson(selfCommand: string, selfArgs: string[]): string {
-  return `${JSON.stringify({ mcp: { servers: { "dts-flow": { type: "stdio", command: selfCommand, args: selfArgs } } } }, null, 2)}\n`;
+export function buildMcpConfigJson(
+  selfCommand: string,
+  selfArgs: string[],
+  selfEnv?: Record<string, string>,
+): string {
+  const server: Record<string, unknown> = { type: "stdio", command: selfCommand, args: selfArgs };
+  if (selfEnv !== undefined && Object.keys(selfEnv).length > 0) server["env"] = selfEnv;
+  return `${JSON.stringify({ mcp: { servers: { "dts-flow": server } } }, null, 2)}\n`;
 }
 
 /** 问题工作区一次性物化的产物路径(#40 决议 2)。 */

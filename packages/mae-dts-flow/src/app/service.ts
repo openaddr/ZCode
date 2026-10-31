@@ -17,7 +17,7 @@ export interface DtsFlowServiceDeps {
   fetch: typeof fetch;
   now?: () => Date;
   /** 服务自身 stdio 启动命令(物化进工作区项目级 MCP 配置;由 serve 入口提供)。 */
-  selfLauncher: { command: string; args: string[] };
+  selfLauncher: { command: string; args: string[]; env?: Record<string, string> };
 }
 
 /**
