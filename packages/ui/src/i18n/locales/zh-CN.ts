@@ -5990,6 +5990,7 @@ const zhCN: Record<string, string> = {
   "mae.dts.list.hint.stopped": "dts-flow 服务未运行:启动服务或在设置中配置后由应用自动拉起",
   "mae.dts.list.hint.unconfigured": "未配置服务端地址:填写云平台地址后即可拉取名下问题单",
   "mae.dts.list.hint.openSettings": "打开设置",
+  "mae.dts.list.retry": "重试",
   "mae.dts.stage.heading": "处理阶段",
   "mae.dts.stage.closed": "已收口,待归档",
   "mae.dts.stage.gateWaiting": "等待确认:分析报告 issue-analysis.md",

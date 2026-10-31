@@ -436,6 +436,9 @@ export function DtsListPage(props: DtsListPageProps) {
             {intl.formatMessage({ id: "mae.dts.list.hint.openSettings" })}
           </Button>
         ) : null}
+        <Button variant="outline" size="sm" data-testid="mae-dts-retry" onClick={() => void loadBoard(owner ?? "")}>
+          {intl.formatMessage({ id: "mae.dts.list.retry" })}
+        </Button>
         {loadFailure === "error" && error !== null ? <p className="max-w-xl text-center text-xs">{error}</p> : null}
       </div>
     );
