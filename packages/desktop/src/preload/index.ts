@@ -684,6 +684,11 @@ contextBridge.exposeInMainWorld("zcode", {
   /** 查询当前语言下是否存在可用的用户社群入口 */
   canOpenCommunity: (locale: Locale): Promise<boolean> =>
     ipcRenderer.invoke(PlatformChannels.CanOpenCommunity, locale),
+  // mae: dts-flow 缺省配置文件读写
+  maeDtsConfigRead: (): Promise<Record<string, unknown> | null> =>
+    ipcRenderer.invoke(PlatformChannels.DtsConfigRead),
+  maeDtsConfigWrite: (patch: Record<string, unknown>): Promise<void> =>
+    ipcRenderer.invoke(PlatformChannels.DtsConfigWrite, patch),
   /** 在系统文件管理器中打开指定路径 */
   openInFileManager: (path: string) => ipcRenderer.invoke(PlatformChannels.OpenInFileManager, path),
   /** 使用系统默认应用打开本地文件 */

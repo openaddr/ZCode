@@ -20,6 +20,7 @@ import {
   HardDrive,
   Keyboard,
   FileSearch,
+  TicketCheck, // mae: DTS 问题流分区图标
 } from "lucide-react";
 import { isSettingsSectionEnabled, type SettingsSectionId } from "@/lib/settingsNavigation.js";
 import type { Theme } from "@/useTheme.js";
@@ -158,6 +159,13 @@ const BASE_SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     id: "workspaceFileSearch",
     icon: FileSearch,
     titleId: "settings.workspaceFileSearch.title",
+    groupId: "basics",
+  },
+  // mae: DTS 问题流连接配置(云平台地址/工号/数据源),收在基础设置组末尾
+  {
+    id: "dtsFlow",
+    icon: TicketCheck,
+    titleId: "settings.dtsFlow.title",
     groupId: "basics",
   },
   {

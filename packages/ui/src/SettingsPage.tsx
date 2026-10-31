@@ -88,6 +88,8 @@ import { HooksSection } from "@/settings/HooksSection.js";
 import { WorkspaceFileSearchSection } from "@/settings/WorkspaceFileSearchSection.js";
 import { MemorySettingsSection } from "@/settings/MemorySettingsSection.js";
 import { BrowserSettingsSection } from "@/settings/BrowserSettingsSection.js";
+// mae: DTS 问题流连接配置分区
+import { DtsFlowSettingsSection } from "@/mae/dts/DtsFlowSettingsSection.js";
 import { ComputerUseSection } from "@/settings/ComputerUseSection.js";
 import { ShortcutSettingsSection } from "@/settings/ShortcutSettingsSection.js";
 import { MigrationSection } from "@/settings/MigrationSection.js";
@@ -2227,6 +2229,9 @@ export function SettingsPage({
                                 handleEmbeddedBrowserAllowInsecureCertificatesChange
                               }
                             />
+                          ) : activeSection === "dtsFlow" ? (
+                            // mae: DTS 问题流连接配置(云平台地址/工号/数据源)
+                            <DtsFlowSettingsSection />
                           ) : activeSection === "computerUse" ? (
                             <ComputerUseSection
                               isDesktop={Boolean(isDesktop)}
