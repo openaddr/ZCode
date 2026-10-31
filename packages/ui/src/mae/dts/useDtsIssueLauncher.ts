@@ -9,6 +9,7 @@ import { useCallback } from "react";
 import type { CommandAck, CommandEnvelope } from "@zcode/shared/zcode-protocol-v4";
 import { useOptionalServices } from "@/hooks/useServices.js";
 import { logger } from "@/logger.js";
+import { useZCodeSessionStore } from "@/store/zcodeSessionStore.js";
 import { createCommandEnvelope } from "@/v4/commandFactory.js";
 import {
   acquireWorkspaceConnection,
@@ -93,6 +94,65 @@ export function useDtsIssueLauncher(): (
       );
       try {
         return await launchDtsIssueOnTransport(lease.transport, workspacePath, firstMessage);
+      } finally {
+        lease.release();
+      }
+    },
+    [services],
+  );
+}
+
+/** 纯编排:向既有会话发续聊文本(转向/排队由协议层裁决),被拒原因透出。 */
+export async function sendDtsSessionTextOnTransport(
+  transport: DtsIssueLaunchTransport,
+  sessionId: string,
+  text: string,
+): Promise<DtsIssueLaunchResult> {
+  try {
+    const ack = await transport.sendCommand(
+      createCommandEnvelope({ type: "sendText", payload: { text }, sessionId }),
+    );
+    if (ack.status !== "accepted") {
+      logger.warn("[dts-issue-launch] 续聊 sendText 被拒", {
+        sessionId,
+        status: ack.status,
+        reasonCode: ack.reasonCode ?? null,
+      });
+      return { ok: false, message: ack.message ?? ack.reasonCode ?? ack.status };
+    }
+    return { ok: true, sessionId };
+  } catch (thrown) {
+    return { ok: false, message: thrown instanceof Error ? thrown.message : String(thrown) };
+  }
+}
+
+/**
+ * 向问题工作区的既有会话发文本(云平台「平台泵续回合」同语义,#68):确认闸放行/打回后
+ * 由 UI 代发续聊词,Agent 不因闸停摆。目标=该工作区活动会话(处理阶段块只存在于活动
+ * 会话窗格);缺席(会话已关闭)如实报不静默。
+ */
+export function useDtsIssueSessionSender(): (
+  workspacePath: string,
+  text: string,
+) => Promise<DtsIssueLaunchResult> {
+  const services = useOptionalServices();
+  return useCallback(
+    async (workspacePath: string, text: string): Promise<DtsIssueLaunchResult> => {
+      if (services === null) {
+        return { ok: false, message: "服务未就绪(ServiceProvider 缺席)" };
+      }
+      const state = useZCodeSessionStore.getState().getWorkspaceState(workspacePath);
+      const liveTask = state.taskListCache?.find((task) => task.status === "running");
+      const sessionId = state.activeTaskId ?? liveTask?.taskId ?? null;
+      if (sessionId === null) {
+        return { ok: false, message: "该工作区没有活动会话" };
+      }
+      const lease = acquireWorkspaceConnection(
+        { workspacePath },
+        services.zcodeAgentService as WorkspaceConnectionAgentService,
+      );
+      try {
+        return await sendDtsSessionTextOnTransport(lease.transport, sessionId, text);
       } finally {
         lease.release();
       }

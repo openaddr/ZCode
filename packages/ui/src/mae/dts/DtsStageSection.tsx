@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { Button } from "@/components/ui/button.js";
 import { cn } from "@/components/lib/utils.js";
+import { logger } from "@/logger.js";
+import { useDtsIssueSessionSender } from "./useDtsIssueLauncher.js";
 import { DEFAULT_DTS_SERVICE_BASE, DTS_STAGE_LABELS } from "./useDtsIssues.js";
 
 export interface DtsIssueLedgerSnapshot {
@@ -64,6 +66,7 @@ export function useDtsIssueStage(options: {
 export function DtsStageSection(props: { workspacePath?: string; separated?: boolean; baseUrl?: string }) {
   const { intl } = useZCodeIntl();
   const ledger = useDtsIssueStage({ workspacePath: props.workspacePath, baseUrl: props.baseUrl });
+  const sendToSession = useDtsIssueSessionSender();
   const [acting, setActing] = useState(false);
   if (ledger === null) return null;
 
@@ -75,6 +78,17 @@ export function DtsStageSection(props: { workspacePath?: string; separated?: boo
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ confirm }),
       });
+      // 云平台同语义(#68):闸裁决后代发续聊词泵起 Agent 下一回合——放行继续修复,
+      // 打回按闸结果修订重报;失败(会话已关)只留痕不阻断,闸状态已落账。
+      if (props.workspacePath) {
+        const pumped = await sendToSession(
+          props.workspacePath,
+          intl.formatMessage({ id: confirm ? "mae.dts.stage.gateApproved" : "mae.dts.stage.gateRejected" }),
+        );
+        if (!pumped.ok) {
+          logger.warn("[dts-stage] 闸后续聊词发送失败", { ticket: ledger.ticket, message: pumped.message });
+        }
+      }
     } finally {
       setActing(false);
     }
