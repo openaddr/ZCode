@@ -353,6 +353,10 @@ export const PlatformChannels = {
   OpenExternal: "zcode:open-external",
   /** Renderer → Main：查询当前语言下是否存在可用的用户社群入口 */
   CanOpenCommunity: "zcode:can-open-community",
+  /** mae: Renderer → Main：读 dts-flow 缺省配置文件(无文件返回 null) */
+  DtsConfigRead: "zcode:mae-dts-config-read",
+  /** mae: Renderer → Main：合并写 dts-flow 缺省配置文件(托管键覆盖,未知键保留) */
+  DtsConfigWrite: "zcode:mae-dts-config-write",
   /** Renderer → Main：在系统文件管理器中打开路径 */
   OpenInFileManager: "zcode:open-in-file-manager",
   /** Renderer → Main：使用系统默认应用打开本地文件 */
@@ -1039,6 +1043,14 @@ export interface PlatformChannelMap {
   [PlatformChannels.CanOpenCommunity]: {
     request: Locale;
     response: boolean;
+  };
+  [PlatformChannels.DtsConfigRead]: {
+    request: void;
+    response: Record<string, unknown> | null;
+  };
+  [PlatformChannels.DtsConfigWrite]: {
+    request: Record<string, unknown>;
+    response: void;
   };
   [PlatformChannels.OpenInFileManager]: {
     request: string;

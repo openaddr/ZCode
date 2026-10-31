@@ -855,6 +855,11 @@ export interface IPlatformService {
 
   /** 查询当前语言下是否存在可用的用户社群入口 */
   canOpenCommunity(locale: Locale): Promise<boolean>;
+  /** mae: dts-flow 缺省配置文件读写(桌面端实装;web 无文件系统不提供) */
+  dtsFlowConfig?: {
+    read(): Promise<Record<string, unknown> | null>;
+    write(patch: Record<string, unknown>): Promise<void>;
+  };
 
   /** 在系统文件管理器中打开指定路径 */
   openInFileManager(path: string): Promise<{ success: boolean; error?: string }>;

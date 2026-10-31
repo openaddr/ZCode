@@ -54,6 +54,11 @@ export function createDesktopPlatform(options: {
     openFeedback: () => window.zcode.executeDesktopCommand(DesktopCommandIds.OpenFeedback),
     openCommunity: () => window.zcode.executeDesktopCommand(DesktopCommandIds.OpenCommunity),
     canOpenCommunity: (locale) => window.zcode.canOpenCommunity(locale),
+    // mae: dts-flow 缺省配置文件读写
+    dtsFlowConfig: {
+      read: () => window.zcode.maeDtsConfigRead(),
+      write: (patch) => window.zcode.maeDtsConfigWrite(patch),
+    },
     openInFileManager: (path) => window.zcode.openInFileManager(path),
     openExternalFile: (path) => window.zcode.openExternalFile(path),
     openCuaPermissionOnboarding: window.zcode.openCuaPermissionOnboarding
