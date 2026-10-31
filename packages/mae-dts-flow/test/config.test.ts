@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { DtsFlowConfigError, loadConfig } from "../src/adapters/configLoader.js";
+import { defaultConfigPath, DtsFlowConfigError, loadConfig } from "../src/adapters/configLoader.js";
 
 async function tempHome(): Promise<string> {
   return mkdtemp(path.join(tmpdir(), "mae-dts-flow-config-"));
@@ -69,3 +69,12 @@ async function writeConfig(home: string, values: Record<string, unknown>): Promi
   await writeFile(file, JSON.stringify(values), "utf8");
   return file;
 }
+
+describe("defaultConfigPath", () => {
+  it("缺省配置路径 = <home>/.zcode-mae/dts-flow/config.json(设置分区落盘位置,#63)", () => {
+    const windowsPath = defaultConfigPath("C:/Users/x");
+    expect(windowsPath).toContain(".zcode-mae");
+    expect(windowsPath).toContain("dts-flow");
+    expect(windowsPath.endsWith(path.join("dts-flow", "config.json")) || windowsPath.endsWith("dts-flow\\config.json")).toBe(true);
+  });
+});

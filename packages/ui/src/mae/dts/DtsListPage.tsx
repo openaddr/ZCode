@@ -21,6 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/components/ui/toast.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { BoardRow, HeaderFilter, VersionGroupSelect } from "./dtsBoardRows.js";
+import { setPendingSettingsSectionIntent } from "@/lib/settingsNavigation.js";
+import { useOptionalTabStore } from "@/store/TabStoreProvider.js";
 import { DEFAULT_DTS_SERVICE_BASE, dtsIssueOpeningPrompt } from "./useDtsIssues.js";
 import {
   BOARD_COL_MIN,
@@ -104,6 +106,10 @@ export function DtsListPage(props: DtsListPageProps) {
   const baseUrl = props.baseUrl ?? DEFAULT_DTS_SERVICE_BASE;
   const [tickets, setTickets] = useState<BoardTicket[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** 加载失败分层:stopped=进程不在;unconfigured=服务在但未配云平台地址;error=其余(带详情)。 */
+  const [loadFailure, setLoadFailure] = useState<"stopped" | "unconfigured" | "error" | null>(null);
+  // 无 Provider(单测)时为 null:仅跳过开设置页动作,意图照发
+  const tabStore = useOptionalTabStore((state) => state);
   const [mock, setMock] = useState(false);
   const [employeeId, setEmployeeId] = useState("");
   const [owner, setOwner] = useState<string | null>(null);
@@ -140,6 +146,15 @@ export function DtsListPage(props: DtsListPageProps) {
         const health = await fetchJson<{ mock: boolean; employeeId: string }>(`${baseUrl}/api/health`);
         setMock(health.mock);
         setEmployeeId(health.employeeId);
+        if (!health.mock) {
+          const configSummary = await fetchJson<{ cloudBaseUrl?: string | null }>(`${baseUrl}/api/config`).catch(() => null);
+          if (configSummary !== null && !configSummary.cloudBaseUrl) {
+            setLoadFailure("unconfigured");
+            setTickets(null);
+            return;
+          }
+        }
+        setLoadFailure(null);
         const effective = ownerId || health.employeeId;
         const board = await fetchJson<TicketsResponse>(`${baseUrl}/api/dts/tickets?owner=${encodeURIComponent(effective)}`);
         setTickets(board.tickets.map((ticket) => ({ ...ticket, actionable: ticket.status === "开发人员实施修改" })));
@@ -152,8 +167,10 @@ export function DtsListPage(props: DtsListPageProps) {
           setIssues([]);
         }
       } catch (caught) {
+        const message = caught instanceof Error ? caught.message : String(caught);
+        setLoadFailure(/Failed to fetch|NetworkError|ECONNREFUSED|fetch failed/i.test(message) ? "stopped" : "error");
         setTickets(null);
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(message);
       }
     },
     [baseUrl],
@@ -393,11 +410,33 @@ export function DtsListPage(props: DtsListPageProps) {
 
   /* ---------- 渲染 ---------- */
 
-  if (error !== null) {
+  if (loadFailure !== null) {
+    const hintId =
+      loadFailure === "stopped"
+        ? "mae.dts.list.hint.stopped"
+        : loadFailure === "unconfigured"
+          ? "mae.dts.list.hint.unconfigured"
+          : "mae.dts.list.unavailable";
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground text-sm" data-testid="mae-dts-list-unavailable">
-        <p>{intl.formatMessage({ id: "mae.dts.list.unavailable" })}</p>
-        <p className="max-w-xl text-center text-xs">{error}</p>
+      <div
+        className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground text-sm"
+        data-testid="mae-dts-list-unavailable"
+        data-failure={loadFailure}
+      >
+        <p data-testid={`mae-dts-hint-${loadFailure}`}>{intl.formatMessage({ id: hintId })}</p>
+        {loadFailure !== "error" ? (
+          <Button
+            size="sm"
+            data-testid="mae-dts-open-settings"
+            onClick={() => {
+              setPendingSettingsSectionIntent("dtsFlow");
+              tabStore?.openSettingsTab();
+            }}
+          >
+            {intl.formatMessage({ id: "mae.dts.list.hint.openSettings" })}
+          </Button>
+        ) : null}
+        {loadFailure === "error" && error !== null ? <p className="max-w-xl text-center text-xs">{error}</p> : null}
       </div>
     );
   }

@@ -1,8 +1,8 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
 
 import { createDtsFlowService } from "./serviceFactory.js";
 import type { DtsFlowService } from "../app/service.js";
-import { loadConfig } from "./configLoader.js";
+import { defaultConfigPath, loadConfig } from "./configLoader.js";
 import { startHttpFace } from "./http.js";
 import { SERVER_INFO_TOOL, createMcpStdioFace, type McpFaceHandlers } from "./mcpStdio.js";
 import { buildFlowToolHandlers } from "./mcpTools.js";
@@ -43,7 +43,9 @@ function parseArgs(argv: readonly string[]): ServeArgs {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const config = await loadConfig({ configPath: args.config });
+  // 无 --config 时探缺省配置文件(设置分区「DTS 问题流」的落盘位置,#63);不存在=全缺省启动。
+  const configPath = args.config ?? (await stat(defaultConfigPath()).then(() => defaultConfigPath(), () => undefined));
+  const config = await loadConfig({ configPath });
   if (args.mock) config.mock = true;
   await mkdir(config.dataDir, { recursive: true });
 

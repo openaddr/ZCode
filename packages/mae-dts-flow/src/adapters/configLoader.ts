@@ -9,10 +9,18 @@ import {
 } from "../domain/config.js";
 
 export interface LoadConfigOptions {
-  /** 显式配置文件路径;给定时必须存在(不给则全缺省启动)。 */
+  /** 显式配置文件路径;给定时必须存在(不给则探缺省路径,见 defaultConfigPath)。 */
   configPath?: string;
   /** 测试注入的用户根;缺省真实 homedir。mae 业务数据根约定为 <home>/.zcode-mae(D10)。 */
   homeDir?: string;
+}
+
+/**
+ * 缺省配置文件路径(设置分区「DTS 问题流」的落盘位置,#63):
+ * <home>/.zcode-mae/dts-flow/config.json。serve 无 --config 时读这里;文件不存在=全缺省启动。
+ */
+export function defaultConfigPath(home = osHomedir()): string {
+  return path.join(home, ".zcode-mae", "dts-flow", "config.json");
 }
 
 /**

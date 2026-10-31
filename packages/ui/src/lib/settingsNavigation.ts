@@ -5,6 +5,7 @@ import { isFeatureDisabled } from "@/mae/featureGates.js";
 
 export type SettingsSectionId =
   | "general"
+  | "dtsFlow" // mae: DTS 问题流连接配置
   | "appearance"
   | "migration"
   | "browser"
