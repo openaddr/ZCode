@@ -6349,6 +6349,8 @@ const enUS: Record<string, string> = {
   "mae.dts.stage.gateWaiting": "Waiting for confirmation: issue-analysis.md",
   "mae.dts.stage.gateReject": "Reject",
   "mae.dts.stage.gateConfirm": "Confirm, proceed to fix",
+  "mae.dts.stage.gateApproved": "Analysis report confirmed. Please continue with the fix stage.",
+  "mae.dts.stage.gateRejected": "Analysis report rejected. Revise and resubmit per the gate result.",
   "automations.pageTab.automation": "Automations",
   "automations.pageTab.workflow": "Workflows",
   "workflows.hub.description":
