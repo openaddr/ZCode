@@ -6342,6 +6342,7 @@ const enUS: Record<string, string> = {
   "mae.dts.list.hint.stopped": "dts-flow service is not running: start it, or configure below and the app will spawn it",
   "mae.dts.list.hint.unconfigured": "Service address not configured: fill in the cloud platform address to fetch your tickets",
   "mae.dts.list.hint.openSettings": "Open settings",
+  "mae.dts.list.retry": "Retry",
   "mae.dts.stage.heading": "Processing stage",
   "mae.dts.stage.closed": "Closed — ready to archive",
   "mae.dts.stage.gateWaiting": "Waiting for confirmation: issue-analysis.md",
