@@ -5997,6 +5997,8 @@ const zhCN: Record<string, string> = {
   "mae.dts.stage.gateWaiting": "等待确认:分析报告 issue-analysis.md",
   "mae.dts.stage.gateReject": "打回",
   "mae.dts.stage.gateConfirm": "确认,进入修复",
+  "mae.dts.stage.gateApproved": "分析报告已确认放行,请继续执行修复阶段",
+  "mae.dts.stage.gateRejected": "分析报告被打回,请按闸结果修订后重新提交分析",
   "automations.pageTab.automation": "自动化",
   "automations.pageTab.workflow": "工作流",
   "workflows.hub.description": "保存在已打开项目里的工作流，填好参数就能再跑一次。",
