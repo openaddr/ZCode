@@ -10,6 +10,7 @@ import path from "node:path";
 import { ipcMain } from "electron";
 
 import { PlatformChannels } from "@zcode/shared";
+import { restartDtsFlowService } from "./dtsFlowService.js";
 
 export function dtsDefaultConfigPath(home?: string): string {
   return path.join(home ?? osHomedir(), ".zcode-mae", "dts-flow", "config.json");
@@ -45,5 +46,7 @@ export function registerDtsConfigIpcHandlers(): void {
       throw new Error("配置写入载荷必须是对象");
     }
     await writeConfigPatch(patch as Record<string, unknown>);
+    // 票 E:配置保存即重启服务(秒级),新配置即刻生效
+    restartDtsFlowService({ info: (...args) => console.info("[mae-dts-flow]", ...args), warn: (...args) => console.warn("[mae-dts-flow]", ...args) });
   });
 }
