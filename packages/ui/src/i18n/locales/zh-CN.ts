@@ -5912,6 +5912,7 @@ const zhCN: Record<string, string> = {
   // mae: DTS 问题会话分组
   "mae.dts.issueSessions": "问题会话",
   "mae.dts.issue.done": "已收口",
+  "mae.dts.issue.launchFailed": "DTS 问题会话发起失败:{message}",
   // mae: DTS 列表页签
   "workspace.openDtsList": "DTS列表",
   // mae: 设置分区「DTS 问题流」(票 D,#63)

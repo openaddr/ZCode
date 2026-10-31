@@ -23,6 +23,7 @@ import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { BoardRow, HeaderFilter, VersionGroupSelect } from "./dtsBoardRows.js";
 import { setPendingSettingsSectionIntent } from "@/lib/settingsNavigation.js";
 import { useOptionalTabStore } from "@/store/TabStoreProvider.js";
+import type { DtsIssueLaunchResult } from "./useDtsIssueLauncher.js";
 import { DEFAULT_DTS_SERVICE_BASE, dtsIssueOpeningPrompt } from "./useDtsIssues.js";
 import {
   BOARD_COL_MIN,
@@ -54,8 +55,8 @@ import {
 } from "./dtsBoardModel.js";
 
 export interface DtsListPageProps {
-  /** 发起成功后在当前窗口开问题会话(草稿);批量时逐张调用,最后切回聊天视图。 */
-  onIssueStarted: (workspacePath: string, openingBrief: string) => void;
+  /** 发起即开跑(#68):建会话+自动发开场词,不再预填草稿;批量时逐张 await,失败保勾选。 */
+  onIssueStarted: (workspacePath: string, openingBrief: string) => Promise<DtsIssueLaunchResult>;
   onSwitchToChat: () => void;
   /** 发起状态列点击:打开该单名下进行中的问题会话。 */
   onOpenIssueSession?: (workspacePath: string) => void;
@@ -376,11 +377,20 @@ export function DtsListPage(props: DtsListPageProps) {
               ...(tier ? { interventionTier: tier } : {}),
             }),
           });
-          succeeded += 1;
           const brief = [started.openingBrief, remarks[ticketNo]?.trim() ? `附加信息:${remarks[ticketNo]?.trim()}` : ""]
             .filter(Boolean)
             .join("\n");
-          props.onIssueStarted(started.workspace.workspacePath, brief || dtsIssueOpeningPrompt(ticketNo));
+          // 发起即开跑(#68):launch 全成(建会话+发首条)才算这张单发起成功;
+          // 会话被拒时服务端工作区已建,记账交还看板发起状态,失败保勾选与原因。
+          const launched = await props.onIssueStarted(
+            started.workspace.workspacePath,
+            brief || dtsIssueOpeningPrompt(ticketNo),
+          );
+          if (!launched.ok) {
+            failures.push(`${ticketNo} → ${launched.message}`);
+            continue;
+          }
+          succeeded += 1;
           setRemarks((current) => {
             const next = { ...current };
             delete next[ticketNo];

@@ -6264,6 +6264,7 @@ const enUS: Record<string, string> = {
   // mae: DTS issue sessions group
   "mae.dts.issueSessions": "Issue sessions",
   "mae.dts.issue.done": "Closed",
+  "mae.dts.issue.launchFailed": "Failed to launch DTS issue session: {message}",
   // mae: DTS list tab
   "workspace.openDtsList": "DTS list",
   // mae: DTS issue flow settings section (ticket D, #63)
