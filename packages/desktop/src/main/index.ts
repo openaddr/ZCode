@@ -128,6 +128,8 @@ import { flushMainE2ECoverage } from "./e2eCoverage.js";
 import { resolveBootstrapSettingsFile } from "./desktopDataBaseDirBootstrap.js";
 // mae: dev 态品牌图标路由(#12)
 import { MAE_BRAND_ASSET_SUBDIR } from "./mae/brandAssets.js";
+// mae: dts-flow 服务桌面自动拉起(票 E,#64)
+import { startDtsFlowService, stopDtsFlowService } from "./mae/dtsFlowService.js";
 import { resolveStartupWindowBootstrap, type StartupWindowBootstrap } from "./startupWorkspace.js";
 import {
   createStartupDeepLinkConsumptionGate,
@@ -2070,6 +2072,8 @@ app.on("second-instance", (_event, argv, _workingDirectory, additionalData) => {
 
 app.whenReady().then(async () => {
   markMainLaunchAppReady();
+  // mae: dts-flow 服务自动拉起(随包产物不在场时跳过,开发模式沿用手动 serve)
+  startDtsFlowService({ info: (...args) => logger.info(...args), warn: (...args) => logger.warn(...args) });
   installRequestSecurityDiagnostics(session.defaultSession.webRequest, logger);
   installLocalMediaPreviewProtocol(session.defaultSession.protocol, {
     isPathAuthorized: localMediaPreviewPathRegistry.isAuthorized,
@@ -2619,6 +2623,10 @@ app.on("window-all-closed", () => {
   }
 
   app.quit();
+});
+app.on("will-quit", () => {
+  // mae: dts-flow 服务进程随应用回收,不留孤儿
+  stopDtsFlowService();
 });
 app.on("before-quit", (event) => {
   // Windows 最后窗口关闭会在 close 阶段提前确认并标记 forceQuit；

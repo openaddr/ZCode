@@ -740,6 +740,11 @@ async function main() {
     run(pnpmCommand, ["build"], buildEnv);
   }
 
+  // mae: dts-flow 服务编译随包(桌面自动拉起,票 E)
+  runTimedSync("bundle:mae-dts-flow", () =>
+    run(pnpmCommand, ["--filter", "@mae/dts-flow", "build"], buildEnv),
+  );
+
   await runTimedAsync("bundle:electron-builder", () =>
     runElectronBuilderWithRetry(buildArgs, buildEnv),
   );
