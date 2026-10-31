@@ -81,7 +81,7 @@ export function useDtsIssues(options: { baseUrl?: string; pollMs?: number } = {}
   return { ...state, issues };
 }
 
-/** 会话开场引导:已发起过的单重开时预填(真首条由发起响应的 openingBrief 提供)。 */
+/** 续处理首条:已发起过的单重开时自动发出(#68 发起即开跑;发起首条由建单响应 openingBrief 提供)。 */
 export function dtsIssueOpeningPrompt(ticket: string): string {
   return `继续处理 DTS 问题单 ${ticket}:先读工作区 .agents/skills/dts-issue-flow/SKILL.md,再按当前阶段推进。`;
 }

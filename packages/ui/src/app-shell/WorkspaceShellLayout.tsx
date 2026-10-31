@@ -64,6 +64,8 @@ import { resolveTopOverlayLeadingPaddingClass, WorkspaceHeader } from "@/Workspa
 import { WorkspaceSidebar, type SidebarFileTreeOpenRequest } from "@/WorkspaceSidebar.js";
 // mae: DTS 列表主视图页签(specs/mae/dts-flow.md #41)
 import { DtsListPage } from "@/mae/dts/DtsListPage.js";
+// mae: DTS 问题会话直接启动器(#68,发起即开跑)
+import { useDtsIssueLauncher } from "@/mae/dts/useDtsIssueLauncher.js";
 import { AnimatedSidePanePanel } from "@/app-shell/AnimatedSidePanePanel.js";
 import {
   findScreenshotSurfaceTabForRender,
@@ -1266,13 +1268,7 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
   );
   // 工作流「运行」现由中枢直接启动（docs/dynamic-workflow/launch.md）：GUI 建空会话 +
   // 发 startSavedWorkflow 命令，不再合成对话文案。本层只在 accepted 后把会话切到前台。
-  // mae: DTS 问题会话——侧栏分组点击→在问题工作区开/续会话(#40;initialPrompt 只填草稿,用户确认发送)
-  const handleCreateDtsIssueSession = useCallback(
-    (workspacePath: string, initialPrompt: string) => {
-      handleCreateTaskInChat({ initialPrompt, targetWorkspace: { workspacePath } });
-    },
-    [handleCreateTaskInChat],
-  );
+  // mae: DTS 问题会话入口改走直接启动器(#68),块体移至 handleSelectTaskInChat 之后以复用其导航。
   const handleSelectTaskInChat = useCallback(
     (
       targetWorkspacePath: string,
@@ -1331,6 +1327,34 @@ const WorkspaceShellLayoutContent = memo(function WorkspaceShellLayoutComponent(
       }
     },
     [handleSelectTask, intl, isWebRemoteControlShell, showChatMainView, tabStoreApi, workspaceTabs],
+  );
+  // mae: DTS 问题会话——发起即开跑(#68,云平台同语义):建会话+自动发首条(开场词/续处理词),
+  // 不再预填草稿等确认;accepted 后复用运行历史导航切到新会话,被拒 toast 带原因。
+  // 修订(烟囱 E2E 实录):云平台「链接即会话入口」——该工作区已有进行中会话(任务列表缓存
+  // status=running)时直接导航,仅无会话时新建,避免对 live 单重复发起第二路 Agent。
+  const launchDtsIssue = useDtsIssueLauncher();
+  const handleCreateDtsIssueSession = useCallback(
+    (workspacePath: string, initialPrompt: string) => {
+      const liveTask = useZCodeSessionStore
+        .getState()
+        .getWorkspaceState(workspacePath)
+        .taskListCache?.find((task) => task.status === "running");
+      if (liveTask) {
+        handleSelectTaskInChat(workspacePath, liveTask.taskId);
+        return Promise.resolve({ ok: true as const, sessionId: liveTask.taskId });
+      }
+      return launchDtsIssue(workspacePath, initialPrompt).then((result) => {
+        if (result.ok) {
+          handleSelectTaskInChat(workspacePath, result.sessionId);
+        } else {
+          toast(
+            intl.formatMessage({ id: "mae.dts.issue.launchFailed" }, { message: result.message }),
+          );
+        }
+        return result;
+      });
+    },
+    [handleSelectTaskInChat, intl, launchDtsIssue],
   );
   // 中枢直接启动 accepted 后切到新会话（run 卡已在顶部）：复用运行历史那条导航，
   // target 恒带工作流所属项目坐标（不变式 7），remoteSessionId 决定连接 endpoint。
