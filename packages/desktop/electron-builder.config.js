@@ -742,6 +742,15 @@ export default {
       to: "config/provider/mae-builtin.json",
     },
     {
+      // mae: dts-flow 服务随包(桌面自动拉起,票 E;构建线先经 bundle:mae-dts-flow 编译)
+      from: resolve(workspaceRoot, "packages/mae-dts-flow/dist"),
+      to: "mae/dts-flow/dist",
+    },
+    {
+      from: resolve(workspaceRoot, "packages/mae-dts-flow/package.json"),
+      to: "mae/dts-flow/package.json",
+    },
+    {
       // 应用图标：打包后放入 resources 目录，主进程通过 process.resourcesPath 加载
       // mae: from 随品牌目录路由(#12)
       from: `${brandAssetDir}/icon.png`,
