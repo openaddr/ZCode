@@ -259,7 +259,9 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
         }
         const adapter = await getPlatform();
         for (const account of ledger.mrAccounts) {
-          if (account.pipeline === "green" || account.pipeline === "red") continue;
+          // green 是终态(收口即停查);red/running 持续跟随最新流水线——红灯返工
+          // (修复重推同一 MR)必须能转绿,否则返工轮次永远无法收口(GitHub 靶场 #73 实录)。
+          if (account.pipeline === "green") continue;
           try {
             account.pipeline = await adapter.pipelineStatus(account.url);
           } catch (error) {
