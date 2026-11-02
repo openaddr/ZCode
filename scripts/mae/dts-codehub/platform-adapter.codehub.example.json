@@ -1,0 +1,27 @@
+{
+  "createMr": [
+    "codehub-cli",
+    "mr",
+    "create",
+    "-p",
+    "{repo}",
+    "--source-branch",
+    "{branch}",
+    "--target-branch",
+    "master",
+    "--title",
+    "{title}",
+    "--e2e-issues",
+    "{ticket}",
+    "--format",
+    "json",
+    "--json",
+    "web_url,iid",
+    "-k"
+  ],
+  "mrStatus": [
+    "node",
+    "C:/absolute/path/to/mr-status-codehub.mjs",
+    "{url}"
+  ]
+}
