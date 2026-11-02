@@ -11,13 +11,13 @@ DTS 问题流的 mrGate 腿在内网 CodeHub 上的适配物。与 `../dts-fixtu
 
 ## 内网当天 runbook(五步)
 
-1. **装 CLI**:`npm install -g @codehub/codehub-cli`(内网源 `cmc.centralrepo.rnd.huawei.com`;Node 14+)。Windows 全局装出来的是 `codehub-cli.cmd`,服务的 execJson 已做 cmd /c 转发,直接可用。
-2. **认证**:`codehub-cli auth login --username <账号> --all`;`codehub-cli auth token` 能吐出令牌即通。CLI 找不到 host 时用 `-H <别名>`(green/open/yellow)——本适配物靠 `{repo}` 完整 URL 推导 host,常规情况无需 `-H`。
-3. **git 推送凭据**:agent 在问题工作区自己 `git push`(分支 `master_<工号>_<单号>`)。给 codehub host 配一次 HTTPS 凭据:用户名=账号、密码=CodeHub token(`git config credential.helper` 或系统凭据管理器均可)。
-4. **放文件**:`mr-status-codehub.mjs` 落 `~/.zcode-mae/bin/`;example json 拷为 `~/.zcode-mae/dts-flow/platform-adapter.json`,`mrStatus` 第二参改成脚本绝对路径。
-5. **重启服务**:设置界面「DTS 问题流」保存任意配置(触发自动重启),让冻结的适配器模板重新加载。
+1. **放 CLI(不碰 PATH)**:内网提供的 `codehub-cli`(exe/cmd 均可)放进约定目录 `~/.zcode-mae/bin`——**不需要也不建议进用户 PATH**。解析序=服务配置 binDir(尊重自定义)→ 缺省 `~/.zcode-mae/bin` → 脚本同目录 → PATH 兜底,服务侧(模板 command[0])与包装脚本内部同一纪律。首次仍要认证一次(凭据在 CLI 自己的 keyring,与放哪无关):`<binDir>/codehub-cli auth login --username <账号> --all`,`auth token` 能吐令牌即通。
+2. **git 推送凭据**:agent 在问题工作区自己 `git push`(分支 `master_<工号>_<单号>`)。给 codehub host 配一次 HTTPS 凭据:用户名=账号、密码=CodeHub token(上一步 `auth token`),Windows 凭据管理器或 `git credential` 均可。
+3. **放文件**:`mr-status-codehub.mjs` 也放 `~/.zcode-mae/bin/`(与 CLI 共置则脚本零配置自动找到 CLI);example json 拷为 `~/.zcode-mae/dts-flow/platform-adapter.json`,`mrStatus` 第二参改成脚本绝对路径。
+4. **重启服务**:设置界面「DTS 问题流」保存任意配置(触发自动重启),让冻结的适配器模板重新加载。
+5. **验证一腿**:`node ~/.zcode-mae/bin/mr-status-codehub.mjs https://codehub-y.huawei.com/<组>/<仓>/merge_requests/<iid>` 应输出三态 JSON。
 
-验证一腿:`node ~/.zcode-mae/bin/mr-status-codehub.mjs https://codehub-y.huawei.com/<组>/<仓>/merge_requests/<iid>` 应输出三态 JSON。
+说明:`node` 本身在 PATH(装 codehub-cli 的 npm 工具链就依赖它);若要求连 node 都不走 PATH,把 `node.exe` 也拷进 binDir——服务与包装脚本都约定目录优先,会自动取它。
 
 ## 关键纪律(为什么是这些命令)
 
