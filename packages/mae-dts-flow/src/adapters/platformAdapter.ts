@@ -107,7 +107,8 @@ export class CliPlatformAdapter implements PlatformAdapter {
     let url = "";
     try {
       const parsed = JSON.parse(stdout) as Record<string, unknown>;
-      url = String(parsed["url"] ?? "");
+      // url=历史模板约定;web_url=codehub-cli `--json web_url,iid` 的真实输出键(#580 内网手册)。
+      url = String(parsed["url"] ?? parsed["web_url"] ?? "");
     } catch {
       url = stdout.trim().split("\n").at(-1) ?? "";
     }
