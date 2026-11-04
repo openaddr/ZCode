@@ -1,19 +1,19 @@
 # dts-codehub —— 内网 CodeHub 适配物(外网预烘,内网直接用)
 
-DTS 问题流的 mrGate 腿在内网 CodeHub 上的适配物。与 `../dts-fixture/`(GitHub 替身)同角色、同隔离纪律:**GitHub/CodeHub 只存在于本目录与部署配置(`platform-adapter.json`)中,产品代码(服务/mrGate/四件套)对具体平台零感知**。命令形状全部来自平台生产配置(`mae-flow-cloud` deploy/adapter-config/adapter.codehub.json)+ codehub-cli 官方 skill 手册 v3.7.1(issue yunine9/mae-flow-cloud#580),零猜测。
+DTS 问题流的 mrGate 腿在内网 CodeHub 上的适配物。与 `../dts-fixture/`(GitHub 替身)同角色、同隔离纪律:**GitHub/CodeHub 只存在于本目录与部署配置(`mr-adapter.json`)中,产品代码(服务/mrGate/四件套)对具体平台零感知**。命令形状全部来自平台生产配置(`mae-flow-cloud` deploy/adapter-config/adapter.codehub.json)+ codehub-cli 官方 skill 手册 v3.7.1(issue yunine9/mae-flow-cloud#580),零猜测。
 
 ## 组成
 
 | 文件 | 作用 | 内网部署位置 |
 |---|---|---|
-| `platform-adapter.codehub.example.json` | 服务适配器配置样例:createMr 直用 codehub-cli,mrStatus 指到包装脚本 | 拷到服务 dataDir(`~/.zcode-mae/dts-flow/platform-adapter.json`)改 mrStatus 的脚本绝对路径 |
+| `mr-adapter.codehub.example.json` | 服务适配器配置样例:createMr 直用 codehub-cli,mrStatus 指到包装脚本 | 拷到服务 dataDir(`~/.zcode-mae/dts-flow/mr-adapter.json`)改 mrStatus 的脚本绝对路径 |
 | `mr-status-codehub.mjs` | mrStatus 适配器:MR URL → `codehub-cli mr pipeline` → `{"pipeline":"green\|red\|running"}` | 放 `~/.zcode-mae/bin/`(binDir)或任意路径(example 里填绝对路径) |
 
 ## 内网当天 runbook(五步)
 
 1. **放 CLI(不碰 PATH)**:内网提供的 `codehub-cli`(exe/cmd 均可)放进约定目录 `~/.zcode-mae/bin`——**不需要也不建议进用户 PATH**。解析序=服务配置 binDir(尊重自定义)→ 缺省 `~/.zcode-mae/bin` → 脚本同目录 → PATH 兜底,服务侧(模板 command[0])与包装脚本内部同一纪律。首次仍要认证一次(凭据在 CLI 自己的 keyring,与放哪无关):`<binDir>/codehub-cli auth login --username <账号> --all`,`auth token` 能吐令牌即通。
 2. **git 推送凭据**:agent 在问题工作区自己 `git push`(分支 `master_<工号>_<单号>`)。给 codehub host 配一次 HTTPS 凭据:用户名=账号、密码=CodeHub token(上一步 `auth token`),Windows 凭据管理器或 `git credential` 均可。
-3. **放文件**:`mr-status-codehub.mjs` 也放 `~/.zcode-mae/bin/`(与 CLI 共置则脚本零配置自动找到 CLI);example json 拷为 `~/.zcode-mae/dts-flow/platform-adapter.json`,`mrStatus` 第二参改成脚本绝对路径。
+3. **放文件**:`mr-status-codehub.mjs` 也放 `~/.zcode-mae/bin/`(与 CLI 共置则脚本零配置自动找到 CLI);example json 拷为 `~/.zcode-mae/dts-flow/mr-adapter.json`,`mrStatus` 第二参改成脚本绝对路径。
 4. **重启服务**:设置界面「DTS 问题流」保存任意配置(触发自动重启),让冻结的适配器模板重新加载。
 5. **验证一腿**:`node ~/.zcode-mae/bin/mr-status-codehub.mjs https://codehub-y.huawei.com/<组>/<仓>/merge_requests/<iid>` 应输出三态 JSON。
 

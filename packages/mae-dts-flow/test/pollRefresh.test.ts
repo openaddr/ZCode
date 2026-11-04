@@ -46,7 +46,7 @@ describe("pollTickets 红灯可刷新(#73 回归)", () => {
 
     // 适配器命令模板:mrStatus 读状态文件输出三态 JSON;createMr 输出固定 URL。
     await writeFile(
-      path.join(dataDir, "platform-adapter.json"),
+      path.join(dataDir, "mr-adapter.json"),
       JSON.stringify({
         createMr: ["node", "-e", "console.log('https://mr.test/pull/1')"],
         mrStatus: ["node", "-e", "console.log(JSON.stringify({pipeline:require('fs').readFileSync(process.argv[1],'utf8').trim()}))", stateFile, "{url}"],

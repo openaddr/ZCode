@@ -14,7 +14,7 @@ export interface PlatformCommands {
 
 /**
  * 缺省命令模板(provisional:字段以 {repo}/{branch}/{title}/{description}/{ticket}/{url} 占位,
- * 内网部署后按真实 codehubcli 旗标在 platform-adapter.json 覆盖,不改代码)。
+ * 内网部署后按真实 codehubcli 旗标在 mr-adapter.json 覆盖,不改代码)。
  */
 export const DEFAULT_COMMANDS: PlatformCommands = {
   createMr: [
@@ -156,13 +156,13 @@ export interface AdapterConfigInput {
 
 export async function createPlatformAdapter(input: AdapterConfigInput): Promise<PlatformAdapter> {
   if (input.mock) return new MockPlatformAdapter();
-  const file = path.join(input.dataDir, "platform-adapter.json");
+  const file = path.join(input.dataDir, "mr-adapter.json");
   const raw = await fs.readFile(file, "utf8").catch(() => null);
   let commands = DEFAULT_COMMANDS;
   if (raw !== null) {
     const parsed = JSON.parse(raw) as Partial<PlatformCommands>;
     if (!Array.isArray(parsed.createMr) || !Array.isArray(parsed.mrStatus)) {
-      throw new PlatformError("platform-adapter.json 格式非法:createMr/mrStatus 必须是字符串数组");
+      throw new PlatformError("mr-adapter.json 格式非法:createMr/mrStatus 必须是字符串数组");
     }
     commands = { createMr: parsed.createMr, mrStatus: parsed.mrStatus };
   }
