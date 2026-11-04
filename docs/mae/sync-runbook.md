@@ -2,22 +2,20 @@
 
 > 上游 `upstream` = zai-org/ZCode(main 由 Sync Bot **每日 squash 发布**,无细粒度历史,tag 如 v3.15.1 是稳定锚点)。
 > 本仓 `origin` = openaddr/ZCode,唯一主干 = **mae**。工具 = jj(colocated,`.jj` 与 `.git` 共存,git 仅作逃生舱)。
-> 模型:**mae = main@upstream + 定制提交栈(rebase 模式)**。本手册是同步解冲突的现场手册与全部命令配方的唯一事实源;定制触碰台账在 [customization-registry.md](customization-registry.md)。
+> 模型:**mae = 定制提交栈 + 每次同步新增一个 merge 提交(merge 基线模式,2026-11-04 起;切换实录与回退配方见「6」)**。本手册是同步解冲突的现场手册与全部命令配方的唯一事实源;定制触碰台账在 [customization-registry.md](customization-registry.md)。
 
 ## 1. 模型与铁律
 
 ```
-U1───U2───U3                  main@upstream(fetch 自动前进;只读地基,永不本地提交)
-            ╲
-             C1───C2───C3     mae = 定制提交栈;每次同步整链重放到新上游头
+U1───U2───U3───U4              main@upstream(每日 squash 前进;只读地基,永不本地提交)
+ │         ╲   ╲
+ C1─C2─C3──M1──M2              mae = 定制栈(C*)+ 同步 merge 提交(M);M 每次落在最新上游头
 ```
 
 1. 不建本地 `main` 分支;上游引用一律写 `main@upstream`。
-2. 同步 = `fetch + rebase 整栈`;不做 merge、不手工复制上游文件(那是上游 bot 的活)。
+2. 同步 = `fetch + jj new mae main@upstream`(新增 merge 提交,每个冲突区域解一遍最终态);不 rebase 整链重放、不手工复制上游文件(那是上游 bot 的活)。
 3. 定制隔离遵守「附录」——新增文件优先。
-4. 出现下列信号即按「6」末尾配方切换 merge 模式(一次性操作,无损):
-   - 连续两三次同步同一批文件反复冲突,单次解冲突超约 30 分钟;
-   - 栈中直接改动上游文件的提交超过约 10 个。
+4. 模型切换信号(2026-11-04 实锤触发,已切换 merge 基线):连续两三次同步同一批文件反复冲突,单次解冲突超约 30 分钟;栈中直接改动上游文件的提交超过约 10 个(切换时实测:45 个定制提交,约 40 个触碰上游文件,其中约 30 个为删除/修改类)。
 
 ## 2. jj 日常纪律(0.45 实踩,借鉴 dafung-web「版本协作」经验)
 
@@ -60,6 +58,8 @@ jj git push -b <书签>          # 4. 推送
 
 - **解冲突确定法**:`jj edit <书签>` 直接进提交本体,工作区改文件即 snapshot 进该提交,`jj new` 离开。勿走 `jj squash` 中转——squash 只进最近父提交,夹层空提交会吃掉解冲突内容(三轮回滚实锤)。
 - **jj 冲突标记全家族**:`<<<<<<<`、`>>>>>>>`、`%%%%%%%`(diff from)、`+++++++`(多侧分隔行)、`\\\\\\\`(context)。清除脚本必须覆盖全部——漏掉 `++++` 侧分隔行会把垃圾行带进合并结果(#15/#16 各实锤一次)。
+- **jj log 机器解析必带 `--no-graph`**(2026-11-04 实锤):图示前缀(`×  `/`○  `)混在行首会让 `grep '^[a-z0-9]'` 类解析永远空匹配——自动循环空转 50 轮还给出假"清零"结论;冲突清零必须双确认(`jj resolve --list` + 全仓标记扫描),勿只信脚本自查。
+- **内容提取禁 `2>&1`**(2026-11-04 实锤):`jj file show … > f 2>&1` 会把 stderr(如 "Rebased N descendant commits…")灌进提取物首行,再落盘即污染仓库;typecheck 不覆盖的文件要靠 lint 的 parse error 兜底才拦住(vitest.config.ts 实锤)。
 - **git index 陈旧幻影**:rebase 后 git status 报上万假 M 时,`rm .git/index && git reset --mixed HEAD` 重建即清(内容零风险)。
 - **abandon 纪律**:禁止盲跑、禁止吞 stderr 的 `jj abandon @-`——2026-10-22 实锤把本地 mae 尖 abandon 掉。书签因此丢失时零恐慌:远端是真相之源,`jj bookmark set <名> -r <名>@origin` 重建 + `jj bookmark track` 即恢复。
 
@@ -69,31 +69,31 @@ jj git push -b <书签>          # 4. 推送
 2. **收尾路径**:workspace 内 `typecheck`/`lint` → 主树检出其书签跑 git 类校验与定向测试 → `jj describe`/书签/推送/PR。
 3. **workspace 谁建谁清**:内容全部进入书签后 `jj workspace forget <名>` + 删目录。
 
-## 6. 同步上游 runbook(按需,不追 bot 日更;重叠面变大后对齐 v3.x tag)
+## 6. 同步上游 runbook(merge 基线,2026-11-04 起;按需,不追 bot 日更,对齐 v3.x tag)
 
 ```bash
-jj git fetch --remote upstream         # ≈ git fetch upstream
-jj rebase -b mae -d main@upstream      # 整栈重放到新上游头(可带冲突完成,可 op log 撤销)
-jj log -r 'conflicts() & mae_custom()' # 列出带冲突的定制提交(无输出 = 零冲突)
-# 解冲突:直接在工作副本改文件(jj 已物化 conflict 标记),保存即生效
+jj git fetch --remote upstream         # ≈ git fetch upstream,确认 main@upstream 前进
+jj new mae main@upstream -m "chore(mae): 同步上游 <tag/短hash>"   # 新增 merge 提交,@ 即其本体
+# 解冲突:已物化到工作区,直接改文件(保存即 snapshot);每个冲突区域只解一遍最终态。
+# 删除/修改类恒定「保留删除」;AGENTS.md 用下方固定解法。
 node scripts/check-workspace-freshness.mjs
+pnpm install                           # 大版本跳跃后先装再诊断——本机依赖落后上游声明版本会制造假类型错(2026-11-04 实锤:electron 41 vs 声明 44,5 个假 TS 错装完即消)
 pnpm typecheck && pnpm lint            # 语义冲突(文本无冲突但构建挂)的唯一防线
-jj git push -b mae                     # 改写后的栈,jj 自动处理非快进推送
-git push origin refs/remotes/upstream/main:refs/heads/main  # 建议顺手做:快进 fork 的 main 镜像
+# 门 1:jj 冲突标记全家族残留扫描(必须零输出;--untracked 必带——jj 会 snapshot 未跟踪文件;pattern 带上下文词,不误伤本手册正文)
+git grep --untracked -nE '^(<{7}|>{7}) conflict|^%{7} diff from:|^\+{7} [a-z0-9]|^\\{7} '
+# 门 2:vitest 冒烟——测试管线活着(unit 项目 include 与 ui 定向各验一面;勿指 DTS 组件测试,见 issue「DTS 组件测试缺 testing-library 依赖从未运行」)
+pnpm vitest run scripts/mae packages/ui/test/maeFeatureGates.test.ts
+jj git push -b mae                     # merge 提交随书签推送
+git push --no-verify origin refs/remotes/upstream/main:refs/heads/main  # 快进 fork 的 main 镜像(husky 对纯引用推送误挡,--no-verify 是正解非绕行)
 ```
+
+**机械收尾独立成票**:与解冲突无关的机械产物作 @ 的子提交单独 describe 随 mae 推送,并在 [customization-registry.md](customization-registry.md) 登记。已知一例:上游 `pnpm-lock.yaml` 可能不自洽(bot squash 固疾,2026-11-04 实锤 `pnpm install --frozen-lockfile` 直接报 badly resolved),此时用 install 重生成 lock(如"chore(mae): 上游同步收尾——pnpm-lock 重生成");根 `package-lock.json` 是手工 npm 镜像(install 不触碰),CalVer 版本随 #20 手改。
 
 > `origin/main` **保留不删**:`scripts/check-workspace-freshness.mjs` 整体以 origin/main 为架构基线(落后超阈值直接失败),删了即断。把它维护成"上游同步点镜像"后,GitHub 网页上 `main..mae` 的 diff 就是定制全景。
 
 > **AGENTS.md 冲突固定解法(所有权模型)**:`AGENTS.md` 归 mae 所有,同步冲突一律保留我方版本;`upstream-AGENTS.md` 是上游快照,同步时用上游新内容**整体替换**(`git show refs/remotes/upstream/main:AGENTS.md > upstream-AGENTS.md`),替换后 diff 一眼上游是否有实质规则变化。
 
-**切换 merge 模型**(满足铁律 4 信号时,一次性):
-
-```bash
-jj git fetch --remote upstream
-jj new mae main@upstream -m "mae: 切换为 merge 同步基线(upstream <短hash>)"
-jj bookmark move mae --to @ && jj git push -b mae
-# 此后每次同步 = 重复 jj new mae main@upstream(每个冲突区域解一遍最终态)
-```
+**回退选项(rebase 模型,模型 B)**:merge 模式出现意外时,`jj rebase -b mae -d main@upstream` 仍是可用逃生舱(整栈重放,可带冲突完成,可 op log 撤销;冲突清单 `jj log --no-graph -r 'conflicts() & mae_custom()'`)。代价 = 同步成本 ≈ 栈深度 × 重叠面,随栈增长单调变贵(v3.15→v3.17.2 实录:44 提交栈产生 33 个冲突提交,级联把 12 处真冲突膨胀为 33 次往返;约 40 个提交触碰上游文件,超铁律 4 阈值 3 倍)——这正是 2026-11-04 改用 merge 基线的原因。merge 模式下 merge 提交之前的中间提交不保证可独立构建,fork 无 bisect 需求,可接受。
 
 ## 7. fork 环境差异(新机器/新会话必读)
 
