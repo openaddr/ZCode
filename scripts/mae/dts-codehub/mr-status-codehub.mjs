@@ -19,7 +19,7 @@
  * - 认不出的流水线状态词 → 退出码 1(同平台 mapStatus「拒绝猜测」纪律);
  * - 空数组 = running(MR 刚建、流水线自动触发延迟是真实等待态)。
  *
- * 内网替换点(README 有当天 runbook):本脚本+platform-adapter.codehub.example.json
+ * 内网替换点(README 有当天 runbook):本脚本+mr-adapter.codehub.example.json
  * 即 mrStatus 腿的全部;CI 红灯诊断口子(mr gate --action … --log)见 README「未来」。
  */
 import { execFileSync } from "node:child_process";
