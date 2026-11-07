@@ -54,41 +54,43 @@ describe("judgeGate(三态裁决)", () => {
 
 describe("platform adapter", () => {
   it("mock 平台:MR 即建即 running,第二次查询转绿", async () => {
-    const adapter = await createPlatformAdapter({ dataDir: path.join(await mkdtemp(path.join(tmpdir(), "pa-")), "d"), mock: true, binDir: "x" });
+    const adapter = createPlatformAdapter({ platform: "mock", binDir: "x" });
     const created = await adapter.createMr({ repo: "r", branch: "b", title: "t", description: "", ticket: "T" });
     expect(created.url).toContain("mr.mock");
     expect(await adapter.pipelineStatus(created.url)).toBe("running");
     expect(await adapter.pipelineStatus(created.url)).toBe("green");
   });
 
-  it("cli 平台:stub codehubcli 走通 create/status", async () => {
+  it("cli 平台:stub codehub-cli 走通 查后建/pipeline 三态(binDir 解析 + cmd /c 转发)", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "pa-cli-"));
     const binDir = path.join(root, "bin");
     await mkdir(binDir, { recursive: true });
     if (process.platform === "win32") {
-      await writeFile(path.join(binDir, "codehubcli.cmd"), '@echo off\nnode "%~dp0codehubcli.js" %*\n', "utf8");
+      await writeFile(path.join(binDir, "codehub-cli.cmd"), '@echo off\nnode "%~dp0codehub-cli.js" %*\n', "utf8");
     } else {
-      const sh = path.join(binDir, "codehubcli");
-      await writeFile(sh, "#!/bin/sh\nnode \"$(dirname \"$0\")/codehubcli.js\" \"$@\"\n", "utf8");
+      const sh = path.join(binDir, "codehub-cli");
+      await writeFile(sh, "#!/bin/sh\nnode \"$(dirname \"$0\")/codehub-cli.js\" \"$@\"\n", "utf8");
       await chmod(sh, 0o755);
     }
     await writeFile(
-      path.join(binDir, "codehubcli.js"),
+      path.join(binDir, "codehub-cli.js"),
       [
         "const args = process.argv.slice(2);",
-        "if (args[0] === 'mr' && args[1] === 'create') {",
-        "  console.log(JSON.stringify({ url: 'https://mr/1' }));",
-        "} else if (args[0] === 'mr' && args[1] === 'status') {",
-        "  console.log(JSON.stringify({ pipeline: 'green' }));",
+        "if (args[0] === 'mr' && args[1] === 'list') {",
+        "  console.log('[]');",
+        "} else if (args[0] === 'mr' && args[1] === 'create') {",
+        "  console.log(JSON.stringify({ web_url: 'https://codehub.test/org/repo/merge_requests/3', iid: '3' }));",
+        "} else if (args[0] === 'mr' && args[1] === 'pipeline') {",
+        "  console.log(JSON.stringify([{ status: 'success' }]));",
         "} else {",
         "  console.log('not-json');",
         "}",
       ].join("\n"),
       "utf8",
     );
-    const adapter = await createPlatformAdapter({ dataDir: root, mock: false, binDir, pathEnv: "" });
-    const created = await adapter.createMr({ repo: "https://r", branch: "master_ning_T", title: "t", description: "", ticket: "T" });
-    expect(created.url).toBe("https://mr/1");
+    const adapter = createPlatformAdapter({ platform: "codehub", binDir, pathEnv: "" });
+    const created = await adapter.createMr({ repo: "https://codehub.test/org/repo.git", branch: "master_ning_T", title: "t", description: "", ticket: "T" });
+    expect(created.url).toBe("https://codehub.test/org/repo/merge_requests/3");
     expect(await adapter.pipelineStatus(created.url)).toBe("green");
   });
 });
@@ -104,7 +106,7 @@ describe("mock 全流程 e2e(发起→申报→假流水线绿→收口归档)",
         employeeId: "ning",
         cloudBaseUrl: null,
         httpPort: 0,
-        mock: true,
+        platform: "mock",
         pipelineBudgetMinutes: 60,
       },
       { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },

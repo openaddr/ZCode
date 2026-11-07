@@ -58,7 +58,7 @@ async function handle(
   const route = `${request.method ?? "GET"} ${url.pathname}`;
   switch (route) {
     case "GET /api/health":
-      respondJson(response, 200, { ok: true, mock: service.config.mock, employeeId: service.config.employeeId });
+      respondJson(response, 200, { ok: true, platform: service.config.platform, mock: service.config.platform === "mock", employeeId: service.config.employeeId });
       return;
     case "GET /api/config":
       respondJson(response, 200, await service.configSummary());
@@ -83,7 +83,8 @@ async function handle(
       const tickets = await service.listTickets(ownerParam === null || ownerParam.trim() === "" ? undefined : ownerParam.trim());
       const actionable = tickets.filter((ticket) => ticket.actionable);
       respondJson(response, 200, {
-        mock: service.config.mock,
+        platform: service.config.platform,
+        mock: service.config.platform === "mock",
         total: tickets.length,
         actionableCount: actionable.length,
         blockedCount: tickets.length - actionable.length,

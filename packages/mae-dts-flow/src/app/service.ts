@@ -1,4 +1,4 @@
-import type { DtsFlowConfig } from "../domain/config.js";
+import type { DtsFlowConfig, MrPlatform } from "../domain/config.js";
 import type { DependencyProbe } from "../domain/depsProbe.js";
 import type {
   DtsBindingMap,
@@ -10,14 +10,17 @@ import type {
 import type { IssueEvent, IssueLedger, InterventionTier } from "../domain/ledger.js";
 import type { InitWorkspaceResult } from "../domain/issueFlow.js";
 
-/** 一期已知依赖组件(UI 依赖面板与调用期守卫共用这份清单)。 */
-export const KNOWN_DEPENDENCIES = ["codehubcli"] as const;
+/** 一期已知依赖组件(UI 依赖面板与调用期守卫共用这份清单;名字=真实二进制名)。
+ * 两个平台 CLI 都在面板呈现可用性,是否在场由所选 platform 决定是否致命。 */
+export const KNOWN_DEPENDENCIES = ["codehub-cli", "gh"] as const;
 
 export interface DtsFlowServiceDeps {
   fetch: typeof fetch;
   now?: () => Date;
   /** 服务自身 stdio 启动命令(物化进工作区项目级 MCP 配置;由 serve 入口提供)。 */
   selfLauncher: { command: string; args: string[]; env?: Record<string, string> };
+  /** 测试注入缝:直接给 MR 平台适配器实例,跳过按 config.platform 构造。 */
+  platform?: import("../adapters/platformAdapter.js").PlatformAdapter;
 }
 
 /**
@@ -33,6 +36,7 @@ export interface DtsFlowService {
     employeeId: string;
     cloudBaseUrl: string | null;
     httpPort: number;
+    platform: MrPlatform;
     mock: boolean;
   }>;
   probeDependencies(): Promise<DependencyProbe[]>;

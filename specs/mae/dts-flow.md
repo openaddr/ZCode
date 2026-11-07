@@ -17,7 +17,7 @@
 - **HTTP 面**(UI 消费):问题列表、发起动作、阶段查询、模块绑定、健康检查;listen 地址默认 `127.0.0.1`,端口可配。
 - **stdio MCP 面**(会话 Agent 消费):阶段机工具(施工票 3 起四件套);与 HTTP 面同进程,共享台账与配置。`--stdio` 时 stdin/stdout 归 MCP 协议。
 - **数据目录**(缺省 `~/.zcode-mae/dts-flow/`):`config.json`、`issues/<单号>/ledger.json` + `events.jsonl`(阶段台账,AI 只读)、`module-bindings.local.json`(本地兜底配置)。
-- **依赖组件**:codehubcli/ops 二进制约定放 `~/.zcode-mae/bin/`,服务启动探测(该目录+PATH);缺席**不阻启动**、调用时 fail-loud(施工票 7 才消费 codehubcli)。
+- **依赖组件**:平台 CLI(codehub-cli/gh)与 ops 二进制约定放 `~/.zcode-mae/bin/`,服务启动探测(该目录+PATH);缺席**不阻启动**、调用时 fail-loud。**MR 平台适配=产品内具名适配器三选一**(`platform: mock/github/codehub`,ADR-0002):GithubPlatformAdapter(gh)/CodehubCliPlatformAdapter(先查后建+mr pipeline 三态映射)/MockPlatformAdapter;2026-11-07 起命令模板层与外部 mr-status 脚本退役。
 
 ## 配置体系(2026-10-30 同源修订)
 
@@ -59,7 +59,7 @@
 
 ## 施工切分(#44 决议)
 
-7 票:①服务骨架与配置体系(本 spec 对应 [#45](https://github.com/openaddr/ZCode/issues/45))→②DTS 网关客户端+mock→③四件套工具+阶段机→④问题会话链路→⑤DTS列表页 UI→⑥阶段块 UI→⑦MR 验绿与收尾。外网开发期 ①-⑥ mock 全可验;⑦ 的 codehubcli 端到端等内网部署。
+7 票:①服务骨架与配置体系(本 spec 对应 [#45](https://github.com/openaddr/ZCode/issues/45))→②DTS 网关客户端+mock→③四件套工具+阶段机→④问题会话链路→⑤DTS列表页 UI→⑥阶段块 UI→⑦MR 验绿与收尾。外网开发期 ①-⑦ 经 GitHub 靶场可全验(ADR-0002 具名适配器);codehub 腿的端到端等内网部署。
 
 ## 已知边界(诚实清单)
 

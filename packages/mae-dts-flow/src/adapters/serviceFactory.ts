@@ -36,11 +36,12 @@ const STAGE_ORDER: readonly string[] = ["dts_info", "prep_repo", "analyze", "fix
 /** 服务工厂(adapters 组合根):把 domain 纯逻辑与 IO 实现接成 DtsFlowService 实例。 */
 export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowServiceDeps): DtsFlowService {
   const now = deps.now ?? (() => new Date());
+  const isMock = config.platform === "mock";
   let gateway: DtsGateway | null = null;
   const getGateway = (): DtsGateway => {
     if (gateway === null) {
       gateway = createDtsGateway(
-        { cloudBaseUrl: config.cloudBaseUrl, mock: config.mock },
+        { cloudBaseUrl: config.cloudBaseUrl, mock: isMock },
         { fetch: deps.fetch },
       );
     }
@@ -49,9 +50,8 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
   let platform: PlatformAdapter | null = null;
   const getPlatform = async (): Promise<PlatformAdapter> => {
     if (platform === null) {
-      platform = await createPlatformAdapter({
-        dataDir: config.dataDir,
-        mock: config.mock,
+      platform = deps.platform ?? createPlatformAdapter({
+        platform: config.platform,
         binDir: config.binDir,
         pathEnv: process.env["PATH"],
       });
@@ -74,7 +74,8 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
         employeeId: config.employeeId,
         cloudBaseUrl: config.cloudBaseUrl,
         httpPort: config.httpPort,
-        mock: config.mock,
+        platform: config.platform,
+        mock: isMock,
       };
     },
     async probeDependencies() {

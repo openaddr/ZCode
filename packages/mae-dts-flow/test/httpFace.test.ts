@@ -15,7 +15,7 @@ function buildService(dataDir: string): DtsFlowService {
       employeeId: "ning",
       cloudBaseUrl: null,
       httpPort: 0,
-      mock: true,
+      platform: "mock",
       pipelineBudgetMinutes: 60,
     },
     { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },
@@ -32,7 +32,7 @@ describe("http face", () => {
       const base = `http://127.0.0.1:${face.port}`;
 
       const health = (await (await fetch(`${base}/api/health`)).json()) as Record<string, unknown>;
-      expect(health).toEqual({ ok: true, mock: true, employeeId: "ning" });
+      expect(health).toEqual({ ok: true, platform: "mock", mock: true, employeeId: "ning" });
 
       const config = (await (await fetch(`${base}/api/config`)).json()) as Record<string, unknown>;
       expect(config["employeeId"]).toBe("ning");
@@ -40,7 +40,7 @@ describe("http face", () => {
       expect(JSON.stringify(config)).not.toContain("token-value");
 
       const deps = (await (await fetch(`${base}/api/deps`)).json()) as { dependencies: Array<{ name: string }> };
-      expect(deps.dependencies.map((dep) => dep.name)).toEqual(["codehubcli"]);
+      expect(deps.dependencies.map((dep) => dep.name)).toEqual(["codehub-cli", "gh"]);
 
       const issues = (await (await fetch(`${base}/api/issues`)).json()) as { issues: Array<{ ticket: string }> };
       expect(issues.issues.map((issue) => issue.ticket)).toEqual(["DTS-2026-1001"]);

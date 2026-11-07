@@ -16,7 +16,7 @@ function buildService(root: string): DtsFlowService {
       employeeId: "ning",
       cloudBaseUrl: null,
       httpPort: 0,
-      mock: true,
+      platform: "mock",
       pipelineBudgetMinutes: 60,
     },
     { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },

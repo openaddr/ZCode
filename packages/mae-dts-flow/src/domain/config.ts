@@ -1,20 +1,25 @@
 /** 服务配置的领域装配:纯逻辑,不碰文件系统;文件读取在 adapters/configLoader。 */
 
+/** MR 平台三选一:mock=罐头演练;github=外网靶场;codehub=内网 CodeHub(ADR-0002)。 */
+export type MrPlatform = "mock" | "github" | "codehub";
+
+export const MR_PLATFORMS: readonly MrPlatform[] = ["mock", "github", "codehub"];
+
 export interface DtsFlowConfig {
   /** 服务数据根(台账、事件流都住这里,在问题工作区之外)。 */
   dataDir: string;
   /** 问题工作区根(每单一个子目录:repo/ 克隆、分析报告、物化技能)。 */
   issuesRoot: string;
-  /** 依赖组件目录(codehubcli 等;缺席不阻启动,调用时 fail-loud)。 */
+  /** 依赖组件目录(codehub-cli/gh 等;缺席不阻启动,调用时 fail-loud)。 */
   binDir: string;
-  /** 工号:云平台拉单 owner 默认值 + 分支名 master_<工号>_<单号> 的因子;mock 模式缺省 dev。 */
+  /** 工号:云平台拉单 owner 默认值 + 分支名 master_<工号>_<单号> 的因子。 */
   employeeId: string;
   /** mae-flow-cloud 地址(数据面同源唯一后端);null=未配置,非 mock 下 fail-loud。 */
   cloudBaseUrl: string | null;
   /** HTTP 面端口。 */
   httpPort: number;
-  /** mock 模式:罐头单据,外网开发/演示用。 */
-  mock: boolean;
+  /** MR 平台三选一(具名适配器,ADR-0002)。 */
+  platform: MrPlatform;
   /** 流水线监看预算(分钟),耗尽停表转人工。 */
   pipelineBudgetMinutes: number;
 }
@@ -28,11 +33,12 @@ export const KNOWN_CONFIG_KEYS: readonly string[] = [
   "employeeId",
   "cloudBaseUrl",
   "httpPort",
-  "mock",
+  "platform",
 ];
 
-/** 直连 DTS 网关时代的退役键(2026-10-30 同源切换):旧配置文件里遇到容忍不炸,值被忽略。 */
-export const DEPRECATED_CONFIG_KEYS: readonly string[] = ["dtsGatewayUrl", "dtsTokenPath"];
+/** 退役键:mock:true(2026-11-07 platform 三值化)映射为 platform:"mock"——platform 在场时以它为准;
+ * dtsGatewayUrl/dtsTokenPath(2026-10-30 同源切换)容忍忽略。 */
+export const DEPRECATED_CONFIG_KEYS: readonly string[] = ["mock", "dtsGatewayUrl", "dtsTokenPath"];
 
 export interface AssembleConfigInput {
   /** 配置文件解析出的键值;null=无配置文件。 */
@@ -43,7 +49,8 @@ export interface AssembleConfigInput {
 
 /**
  * 纯装配:缺省值 ← 配置文件 ← mock 兜底。
- * 未知键拒绝(防拼写错静默失效);退役键容忍忽略;employeeId 非 mock 缺失即抛;非法值 fail-loud。
+ * 未知键拒绝(防拼写错静默失效);退役键 mock:true 映射 platform:"mock";
+ * employeeId 非 mock 缺失即抛;非法值 fail-loud。
  */
 export function assembleConfig(input: AssembleConfigInput): DtsFlowConfig {
   const fileValues = input.fileValues ?? {};
@@ -56,10 +63,23 @@ export function assembleConfig(input: AssembleConfigInput): DtsFlowConfig {
     }
   }
 
+  const platformRaw = pickString(fileValues, "platform");
+  if (platformRaw !== null && !MR_PLATFORMS.includes(platformRaw as MrPlatform)) {
+    throw new DtsFlowConfigError(
+      `platform 只允许 ${MR_PLATFORMS.join("/")},得到 ${platformRaw}`,
+    );
+  }
+  const platform =
+    (platformRaw as MrPlatform | null) ?? (fileValues["mock"] === true ? "mock" : null);
+  if (platform === null) {
+    throw new DtsFlowConfigError(
+      "配置缺少 platform(MR 平台 mock/github/codehub);设置界面「MR 平台」选择或写入配置文件",
+    );
+  }
+
   const dataDir = pickString(fileValues, "dataDir") ?? joinPath(input.maeRoot, "dts-flow");
   const issuesRoot = pickString(fileValues, "issuesRoot") ?? joinPath(input.maeRoot, "dts-issues");
-  const mock = fileValues["mock"] === true;
-  const employeeId = pickString(fileValues, "employeeId") ?? (mock ? "dev" : "");
+  const employeeId = pickString(fileValues, "employeeId") ?? (platform === "mock" ? "dev" : "");
   if (!employeeId) {
     throw new DtsFlowConfigError("配置缺少 employeeId(工号,拉单 owner 与分支名因子);写入配置文件或改用 mock 模式");
   }
@@ -71,7 +91,7 @@ export function assembleConfig(input: AssembleConfigInput): DtsFlowConfig {
     employeeId,
     cloudBaseUrl: assertHttpUrlIfPresent(pickString(fileValues, "cloudBaseUrl"), "cloudBaseUrl"),
     httpPort: pickPort(fileValues),
-    mock,
+    platform,
     pipelineBudgetMinutes: pickBudgetMinutes(fileValues),
   };
 }
