@@ -24,8 +24,13 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const DESKTOP_DIST = path.resolve(scriptDir, "../../packages/desktop/dist");
 
 /** spawn 包装:inherit=透传给用户看;管道=捕获合并输出。返回 {ok,out}。 */
-function run(cmd, inherit = false) {
-  const proc = spawnSync(cmd[0], cmd.slice(1), { stdio: inherit ? "inherit" : "pipe", encoding: "utf8" });
+/** spawn 包装:inherit=透传给用户看;管道=捕获合并输出;extraEnv 追加环境变量。 */
+function run(cmd, inherit = false, extraEnv = {}) {
+  const proc = spawnSync(cmd[0], cmd.slice(1), {
+    stdio: inherit ? "inherit" : "pipe",
+    encoding: "utf8",
+    ...(Object.keys(extraEnv).length > 0 ? { env: { ...process.env, ...extraEnv } } : {}),
+  });
   const out = `${proc.stdout ?? ""}\n${proc.stderr ?? ""}`.trim();
   return { ok: proc.status === 0, out };
 }
@@ -136,7 +141,11 @@ export function main(argv) {
   // 4) 出包/对版(--skip-build 跳过构建只做对版:gh 步失败重跑不重建)。发版与 bump
   //    必须同日:resolveBuildCalVer 跨日把 PATCH 归 0,appVersion 即与 tag 错位——对账红出。
   if (!args.skipBuild) {
-    const build = run(["node", "packages/desktop/scripts/bundle.mjs", "--os", "win", "--arch", "x64"], true);
+    // 发版档位固化 ZCODE_ENV=production:缺省后端轴解析为 test,产物名带 _TEST 后缀
+    // (D14/2026-10-23 盘点)——Release 资产要干净文件名,发布政策固化进脚本(dafung-web #1060 同例)。
+    const build = run(["node", "packages/desktop/scripts/bundle.mjs", "--os", "win", "--arch", "x64"], true, {
+      ZCODE_ENV: "production",
+    });
     if (!build.ok)
       red("bundle.mjs 出包失败——上方输出看构建报错(旧 win-unpacked 锁可删 packages/desktop/dist 重跑)。");
   }
