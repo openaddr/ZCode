@@ -189,7 +189,17 @@ export function main(argv) {
   }
 
   // 6) 发 Release(--generate-notes 按提交史生成 body;润色走 gh release edit)。
-  const ghArgs = ["gh", "release", "create", tag, asset, "--verify-tag", "--generate-notes", "--title", tag];
+  //    --repo 从 origin 显式解析:gh 全局 default 可能指别处(2026-11-07 首版实录——
+  //    本机 gh default=zai-org/ZCode 上游仓,--verify-tag 靠 tag 不在那边拦下了一场误发)。
+  const originUrl = run(["git", "remote", "get-url", "origin"]).out;
+  const repoSlug = originUrl.replace(/^.*github\.com[:/]/, "").replace(/\.git$/, "");
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repoSlug))
+    red(`origin 仓库解析不动(${originUrl})——人工核对后传参重试。`);
+  const ghArgs = [
+    "gh", "release", "create", tag, asset,
+    "--repo", repoSlug,
+    "--verify-tag", "--generate-notes", "--title", tag,
+  ];
   if (args.draft) ghArgs.push("--draft");
   const created = run(ghArgs, true);
   if (!created.ok)
