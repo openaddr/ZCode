@@ -101,18 +101,10 @@ export function main(argv) {
     );
   }
 
-  // 3) 版本与远端 tag 查重(版本单源 package.json,bump 前置 PR 已合入;重号即红)。
-  const { version } = JSON.parse(readFileSync("package.json", "utf8"));
-  if (!isCalVer(version))
-    red(`package.json version=${version} 不是 CalVer——发版前置 PR 先 bump(语义见 scripts/mae/calver.mjs)。`);
-  const tag = `v${version}`;
-  const remoteTag = run(["git", "ls-remote", "origin", `refs/tags/${tag}`]);
-  if (!remoteTag.ok) red(`git ls-remote 失败:${remoteTag.out}`);
-  if (remoteTag.out) red(`远端已有 ${tag}——发版前置 PR 先 bump package.json version 再发。`);
-
-  // 3.6) 环境探针(秒级,防「构建 13 分钟后炸在环境形状」——2026-11-07 首版四拦的预演版):
+  // 2.5) 环境探针(秒级,防「构建 13 分钟后炸在环境形状」——2026-11-07 首版四拦的预演版):
   //   ①构建步将钉的 System32 tar 在场且自报 bsdtar(#87);②origin slug 可解析(#89);
   //   ③gh 认证可达目标仓(未登录/改名/断网在构建前显形)。
+  //   排在版本闸之前:dry-run 在版本已被消费的日子(远端已有当日 tag)也照样给环境信号。
   const system32Tar = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe");
   if (!existsSync(system32Tar)) red(`System32 tar 不在(${system32Tar})——构建步的 bsdtar 钉死会失效。`);
   const tarVersion = run([system32Tar, "--version"]);
@@ -122,6 +114,15 @@ export function main(argv) {
   if (!repoSlug) red(`origin 仓库解析不动(${originUrl})——人工核对。`);
   const ghReach = run(["gh", "repo", "view", repoSlug, "--json", "name", "-q", ".name"]);
   if (!ghReach.ok) red(`gh 达不到 ${repoSlug}(未登录/改名/断网?):${ghReach.out.slice(0, 120)}`);
+
+  // 3) 版本与远端 tag 查重(版本单源 package.json,bump 前置 PR 已合入;重号即红)。
+  const { version } = JSON.parse(readFileSync("package.json", "utf8"));
+  if (!isCalVer(version))
+    red(`package.json version=${version} 不是 CalVer——发版前置 PR 先 bump(语义见 scripts/mae/calver.mjs)。`);
+  const tag = `v${version}`;
+  const remoteTag = run(["git", "ls-remote", "origin", `refs/tags/${tag}`]);
+  if (!remoteTag.ok) red(`git ls-remote 失败:${remoteTag.out}`);
+  if (remoteTag.out) red(`远端已有 ${tag}——发版前置 PR 先 bump package.json version 再发。`);
 
   console.log(
     `[release] 发布目标 mae@origin=${maeId.slice(0, 9)} tag=${tag}${args.draft ? " (draft)" : ""}${args.skipBuild ? " (skip-build,复用已有产物)" : ""}${args.dryRun ? " (dry-run,到此为止)" : ""}`,
