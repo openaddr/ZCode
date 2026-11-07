@@ -8,6 +8,19 @@ pre_push_stdin=""
 if [ ! -t 0 ]; then
   pre_push_stdin=$(cat)
 fi
+# mae: fork 守卫——origin 无 staging 分支时，钩子末环 engineering:affected --scope push
+# 的 origin/staging 基线结构性必红（scripts/engineering-tests/scope.mjs firstPushBase），
+# 且要白跑前面约 8 分钟全套检查才红到那一环（2026-11-07 首版发版实录）。
+# 语义不变：裸 git push 在本 fork 依旧一律拦截（铁律：交付走书签+PR）；
+# 发版 tag 走 scripts/mae/release.mjs（自带 --no-verify）。只把 8 分钟慢红变 1 秒快红。
+# ls-remote 缺 ref 的退出码是 2；网络等其它失败交给后续链条自然红，不在此误判。
+ls_remote_status=0
+git ls-remote --exit-code origin refs/heads/staging >/dev/null 2>&1 || ls_remote_status=$?
+if [ "$ls_remote_status" = "2" ]; then
+  echo "husky(pre-push): origin 无 staging 分支——mae fork 的裸 git push 一律拦截。" >&2
+  echo "  代码交付：jj workspace + 书签 + PR（AGENTS.md）；发版 tag：node scripts/mae/release.mjs（--no-verify 内建）。" >&2
+  exit 1
+fi
 # Bugfix: Git hook 会注入 GIT_DIR/GIT_WORK_TREE 等 local env。
 # 不清理会让单测里的临时仓库 Git 命令误命中当前仓库（例如把功能分支改名为 main）。
 # shellcheck disable=SC2046

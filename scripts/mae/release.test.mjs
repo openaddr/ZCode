@@ -1,7 +1,7 @@
 // 发版脚本纯函数单测:参数解析/产物定位/版本对账——闸序列(glue)靠主树 --dry-run 实跑。
 import { describe, expect, it } from "vitest";
 
-import { findInstallerArtifact, parseReleaseArgs, readInstallerVersion } from "./release.mjs";
+import { findInstallerArtifact, originSlug, parseReleaseArgs, readInstallerVersion } from "./release.mjs";
 
 describe("parseReleaseArgs", () => {
   it("三个开关各认各的,组合也认", () => {
@@ -41,6 +41,19 @@ describe("findInstallerArtifact(恰有一个语义)", () => {
         "2026.1107.0",
       ),
     ).toHaveLength(2);
+  });
+});
+
+describe("originSlug(--repo 实参解析,#89)", () => {
+  it("https 与 ssh 两形态都解析出 owner/repo", () => {
+    expect(originSlug("https://github.com/openaddr/ZCode.git")).toBe("openaddr/ZCode");
+    expect(originSlug("git@github.com:openaddr/ZCode.git")).toBe("openaddr/ZCode");
+  });
+
+  it("解析不动返回 null(探针段红出,不猜)", () => {
+    expect(originSlug("https://gitlab.com/o/r.git")).toBeNull();
+    expect(originSlug("")).toBeNull();
+    expect(originSlug(undefined)).toBeNull();
   });
 });
 
