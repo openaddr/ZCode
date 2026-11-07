@@ -143,8 +143,14 @@ export function main(argv) {
   if (!args.skipBuild) {
     // 发版档位固化 ZCODE_ENV=production:缺省后端轴解析为 test,产物名带 _TEST 后缀
     // (D14/2026-10-23 盘点)——Release 资产要干净文件名,发布政策固化进脚本(dafung-web #1060 同例)。
+    // tar 钉到 System32 bsdtar:node→pnpm.cmd spawn 链解析到的 GNU tar 无 MSYS 盘符语义,
+    // `tar -xzf C:/...` 被当远程主机 C: 报 "Cannot connect to C:"(2026-11-07 首版实录);
+    // bsdtar 原生认盘符(上游 CI windows-latest 即此解析),放 PATH 最前确保先命中。
+    const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === "path") ?? "Path";
+    const system32 = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32");
     const build = run(["node", "packages/desktop/scripts/bundle.mjs", "--os", "win", "--arch", "x64"], true, {
       ZCODE_ENV: "production",
+      [pathKey]: `${system32};${process.env[pathKey] ?? ""}`,
     });
     if (!build.ok)
       red("bundle.mjs 出包失败——上方输出看构建报错(旧 win-unpacked 锁可删 packages/desktop/dist 重跑)。");
