@@ -86,10 +86,10 @@ it("保存:表单合法→写盘载荷含 mock 映射;缺工号→问题提示�
   fireEvent.click(screen.getByTestId("mae-dts-settings-save"));
   await waitFor(() => expect(mock.platform.dtsFlowConfig.write).toHaveBeenCalled());
   const patch = mock.platform.dtsFlowConfig.write.mock.calls[0]?.[0] as Record<string, unknown>;
-  expect(patch).toEqual({ employeeId: "ning", mock: false, cloudBaseUrl: "http://mae-flow.internal:8787", httpPort: 8788 });
+  expect(patch).toEqual({ employeeId: "ning", platform: "codehub", cloudBaseUrl: "http://mae-flow.internal:8787", httpPort: 8788 });
 });
 
-it("数据源=本地模拟:mock:true 且无地址也放行;服务未运行时状态卡显示停止", async () => {
+it("保存放行:配置缺地址也合法(云平台缺省映射 platform=codehub;jsdom 切不了 Radix Select,mock 路径由 onValueChange 三值直译);服务未运行时状态卡显示停止", async () => {
   mock.platform.dtsFlowConfig.read.mockResolvedValueOnce({ employeeId: "ning" });
   stubHealth(null);
   render(createElement(DtsFlowSettingsSection));
@@ -101,7 +101,7 @@ it("数据源=本地模拟:mock:true 且无地址也放行;服务未运行时状
   fireEvent.change(screen.getByTestId("mae-dts-settings-employee-id"), { target: { value: "ning" } });
   fireEvent.click(screen.getByTestId("mae-dts-settings-save"));
   await waitFor(() => expect(mock.platform.dtsFlowConfig.write).toHaveBeenCalled());
-  expect(mock.platform.dtsFlowConfig.write.mock.calls[0]?.[0]).toMatchObject({ employeeId: "ning", mock: false });
+  expect(mock.platform.dtsFlowConfig.write.mock.calls[0]?.[0]).toMatchObject({ employeeId: "ning", platform: "codehub" });
 });
 
 it("web 形态(dtsFlowConfig 未实装):保存提示仅桌面可用", async () => {

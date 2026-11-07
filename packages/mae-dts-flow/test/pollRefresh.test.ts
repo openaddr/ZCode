@@ -6,9 +6,11 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createDtsFlowService, type DtsFlowService } from "../src/contract.js";
+import { createDtsFlowService } from "../src/contract.js";
+import { type PlatformAdapter } from "../src/adapters/platformAdapter.js";
 import { listIssueLedgers, saveIssueLedger } from "../src/adapters/ledgerStore.js";
 import type { IssueLedger } from "../src/domain/ledger.js";
+import type { PipelineState } from "../src/domain/mrGate.js";
 
 function buildLedger(ticket: string, pipeline: "red" | "running"): IssueLedger {
   const now = new Date().toISOString();
@@ -37,22 +39,21 @@ async function mkdtempSafe(): Promise<string> {
 }
 
 describe("pollTickets 红灯可刷新(#73 回归)", () => {
-  it("red 不定格:statefile 转 green 后下一拍刷新并收口", async () => {
+  it("red 不定格:流水线转 green 后下一拍刷新并收口", async () => {
     const root = await mkdtempSafe();
     const dataDir = path.join(root, "data");
     await mkdir(dataDir, { recursive: true });
-    const stateFile = path.join(root, "pipeline-state.txt");
-    await writeFile(stateFile, "red", "utf8");
 
-    // 适配器命令模板:mrStatus 读状态文件输出三态 JSON;createMr 输出固定 URL。
-    await writeFile(
-      path.join(dataDir, "mr-adapter.json"),
-      JSON.stringify({
-        createMr: ["node", "-e", "console.log('https://mr.test/pull/1')"],
-        mrStatus: ["node", "-e", "console.log(JSON.stringify({pipeline:require('fs').readFileSync(process.argv[1],'utf8').trim()}))", stateFile, "{url}"],
-      }),
-      "utf8",
-    );
+    // 注入假适配器:状态由闭包变量驱动(create_mr/poll 只走 platform 腿,本测试不触网关)。
+    let verdict: PipelineState = "red";
+    const scripted: PlatformAdapter = {
+      async createMr() {
+        return { repo: "https://mr.test/x.git", url: "https://mr.test/pull/1", branch: "master_ning_x" };
+      },
+      async pipelineStatus() {
+        return verdict;
+      },
+    };
 
     const service = createDtsFlowService(
       {
@@ -60,12 +61,16 @@ describe("pollTickets 红灯可刷新(#73 回归)", () => {
         issuesRoot: path.join(root, "issues-ws"),
         binDir: path.join(root, "bin"),
         employeeId: "ning",
-        cloudBaseUrl: "http://mr.test", // 本测试不触网关:create_mr/poll 只走 platformAdapter
+        cloudBaseUrl: "http://mr.test",
         httpPort: 0,
-        mock: false,
+        platform: "codehub",
         pipelineBudgetMinutes: 60,
       },
-      { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },
+      {
+        fetch,
+        selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] },
+        platform: scripted,
+      },
     );
 
     await mkdir(path.join(dataDir, "issues", "DTS-2026-9001"), { recursive: true });
@@ -77,7 +82,7 @@ describe("pollTickets 红灯可刷新(#73 回归)", () => {
     expect(afterRed.mrAccounts[0]?.pipeline).toBe("red");
 
     // 红灯返工:重推后流水线转绿 → 下一拍必须刷新(回归:旧实现把 red 当终态跳过)。
-    await writeFile(stateFile, "green", "utf8");
+    verdict = "green";
     await service.pollTickets();
     const [afterGreen] = await listIssueLedgers(dataDir);
     expect(afterGreen.mrAccounts[0]?.pipeline).toBe("green");

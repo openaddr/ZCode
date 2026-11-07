@@ -1,4 +1,0 @@
-{
-  "createMr": ["gh", "pr", "create", "--repo", "{repo}", "--head", "{branch}", "--title", "{title}", "--body", "{description}"],
-  "mrStatus": ["node", "<本仓绝对路径>\\scripts\\mae\\dts-fixture\\mr-status.mjs", "{url}"]
-}

@@ -13,24 +13,40 @@ async function tempHome(): Promise<string> {
 describe("loadConfig", () => {
   it("mock 模式全缺省可启动,工号兜底 dev,目录落在 ~/.zcode-mae 下", async () => {
     const home = await tempHome();
-    const mockConfig = await loadConfig({ homeDir: home, configPath: await writeConfig(home, { mock: true }) });
-    expect(mockConfig.mock).toBe(true);
+    const mockConfig = await loadConfig({ homeDir: home, configPath: await writeConfig(home, { platform: "mock" }) });
+    expect(mockConfig.platform).toBe("mock");
     expect(mockConfig.employeeId).toBe("dev");
     expect(mockConfig.dataDir).toBe(path.join(home, ".zcode-mae", "dts-flow"));
     expect(mockConfig.binDir).toBe(path.join(home, ".zcode-mae", "bin"));
     expect(mockConfig.httpPort).toBe(8788);
   });
 
-  it("非 mock 缺工号 fail-loud 并指名字段", async () => {
+  it("缺 platform fail-loud 并指路;选了平台缺工号指 employeeId", async () => {
     const home = await tempHome();
     await expect(loadConfig({ homeDir: home })).rejects.toThrow(DtsFlowConfigError);
-    await expect(loadConfig({ homeDir: home })).rejects.toThrow(/employeeId/);
+    await expect(loadConfig({ homeDir: home })).rejects.toThrow(/platform/);
+    const withPlatform = await loadConfig({
+      homeDir: home,
+      configPath: await writeConfig(home, { platform: "codehub" }),
+    }).catch((error: DtsFlowConfigError) => error);
+    expect((withPlatform as Error).message).toMatch(/employeeId/);
+  });
+
+  it("platform 非法值 fail-loud;退役 mock:true 映射 platform:\"mock\"", async () => {
+    const home = await tempHome();
+    await expect(
+      loadConfig({ homeDir: home, configPath: await writeConfig(home, { employeeId: "ning", platform: "gitlab" }) }),
+    ).rejects.toThrow(/platform 只允许/);
+    const legacy = await loadConfig({ homeDir: home, configPath: await writeConfig(home, { mock: true }) });
+    expect(legacy.platform).toBe("mock");
+    expect(legacy.employeeId).toBe("dev");
   });
 
   it("配置文件字段生效;未知字段拒绝;直连时代退役键容忍忽略", async () => {
     const home = await tempHome();
     const configPath = await writeConfig(home, {
       employeeId: "ning",
+      platform: "codehub",
       httpPort: 9999,
       cloudBaseUrl: "http://mae-flow.internal:8787/",
       unknownKey: true,
@@ -40,6 +56,7 @@ describe("loadConfig", () => {
       homeDir: home,
       configPath: await writeConfig(home, {
         employeeId: "ning",
+        platform: "codehub",
         httpPort: 9999,
         cloudBaseUrl: "http://mae-flow.internal:8787/",
         dtsGatewayUrl: "http://old-gateway/rpc",
@@ -55,10 +72,10 @@ describe("loadConfig", () => {
   it("非法值 fail-loud:坏端口/坏 URL/给定的配置文件不存在", async () => {
     const home = await tempHome();
     await expect(
-      loadConfig({ homeDir: home, configPath: await writeConfig(home, { employeeId: "ning", httpPort: 0 }) }),
+      loadConfig({ homeDir: home, configPath: await writeConfig(home, { employeeId: "ning", platform: "codehub", httpPort: 0 }) }),
     ).rejects.toThrow(/httpPort/);
     await expect(
-      loadConfig({ homeDir: home, configPath: await writeConfig(home, { employeeId: "ning", cloudBaseUrl: "ftp://x" }) }),
+      loadConfig({ homeDir: home, configPath: await writeConfig(home, { employeeId: "ning", platform: "codehub", cloudBaseUrl: "ftp://x" }) }),
     ).rejects.toThrow(/cloudBaseUrl/);
     await expect(loadConfig({ homeDir: home, configPath: path.join(home, "nope.json") })).rejects.toThrow(/配置文件读取失败/);
   });

@@ -14,24 +14,29 @@ import { cn } from "@/components/lib/utils.js";
 import { DEFAULT_DTS_SERVICE_BASE } from "./useDtsIssues.js";
 
 type DataSource = "cloud" | "mock";
+/** MR 平台(ADR-0002):界面只暴露两个真实平台;mock 由数据源=模拟隐含。 */
+type MrPlatformChoice = "codehub" | "github";
 
 interface DtsConfigForm {
   cloudBaseUrl: string;
   employeeId: string;
   dataSource: DataSource;
+  mrPlatform: MrPlatformChoice;
   httpPort: string;
 }
 
-const EMPTY_FORM: DtsConfigForm = { cloudBaseUrl: "", employeeId: "", dataSource: "cloud", httpPort: "8788" };
+const EMPTY_FORM: DtsConfigForm = { cloudBaseUrl: "", employeeId: "", dataSource: "cloud", mrPlatform: "codehub", httpPort: "8788" };
 
 function configToForm(config: Record<string, unknown> | null): DtsConfigForm {
   if (config === null) return EMPTY_FORM;
   const httpPort = typeof config["httpPort"] === "number" ? String(config["httpPort"]) : "8788";
-  const mock = config["mock"] === true;
+  const platform = config["platform"];
+  const mrPlatform: MrPlatformChoice = platform === "github" ? "github" : "codehub";
   return {
     cloudBaseUrl: typeof config["cloudBaseUrl"] === "string" ? config["cloudBaseUrl"] : "",
     employeeId: typeof config["employeeId"] === "string" ? config["employeeId"] : "",
-    dataSource: mock ? "mock" : "cloud",
+    dataSource: platform === "mock" ? "mock" : "cloud",
+    mrPlatform,
     httpPort,
   };
 }
@@ -49,7 +54,10 @@ function formToPatch(form: DtsConfigForm): { patch: Record<string, unknown>; pro
   if (form.httpPort.trim() !== "" && (!Number.isInteger(port) || port < 1 || port > 65535)) {
     return { patch: {}, problem: "badPort" };
   }
-  const patch: Record<string, unknown> = { employeeId, mock: form.dataSource === "mock" };
+  const patch: Record<string, unknown> = {
+    employeeId,
+    platform: form.dataSource === "mock" ? "mock" : form.mrPlatform,
+  };
   if (cloudBaseUrl !== "") patch["cloudBaseUrl"] = cloudBaseUrl.replace(/\/+$/, "");
   if (form.httpPort.trim() !== "") patch["httpPort"] = port;
   return { patch, problem: null };
@@ -192,6 +200,22 @@ export function DtsFlowSettingsSection() {
         </Select>
         <span className="text-muted-foreground text-xs">{intl.formatMessage({ id: "settings.dtsFlow.dataSourceHint" })}</span>
       </label>
+
+      {form.dataSource === "cloud" ? (
+        <label className="flex flex-col gap-1">
+          <span className="text-muted-foreground text-xs">{intl.formatMessage({ id: "settings.dtsFlow.mrPlatform" })}</span>
+          <Select value={form.mrPlatform} onValueChange={(value) => setForm((current) => ({ ...current, mrPlatform: value as MrPlatformChoice }))}>
+            <SelectTrigger className="h-8" data-testid="mae-dts-settings-mr-platform">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="codehub">{intl.formatMessage({ id: "settings.dtsFlow.mrPlatformCodehub" })}</SelectItem>
+              <SelectItem value="github">{intl.formatMessage({ id: "settings.dtsFlow.mrPlatformGithub" })}</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-muted-foreground text-xs">{intl.formatMessage({ id: "settings.dtsFlow.mrPlatformHint" })}</span>
+        </label>
+      ) : null}
 
       <div>
         <Button variant="ghost" size="sm" onClick={() => setAdvancedOpen((open) => !open)}>

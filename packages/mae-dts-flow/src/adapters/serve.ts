@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   // 无 --config 时探缺省配置文件(设置分区「DTS 问题流」的落盘位置,#63);不存在=全缺省启动。
   const configPath = args.config ?? (await stat(defaultConfigPath()).then(() => defaultConfigPath(), () => undefined));
   const config = await loadConfig({ configPath });
-  if (args.mock) config.mock = true;
+  if (args.mock) config.platform = "mock";
   await mkdir(config.dataDir, { recursive: true });
 
   const selfServePath = new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
@@ -68,7 +68,7 @@ async function main(): Promise<void> {
   const face = args.stdio ? null : await startHttpFace(service, { port: args.port ?? config.httpPort });
   if (face) {
     // 日志只走 stderr:--stdio 时 stdout 是 MCP 协议通道,任何非协议字节都会打断会话客户端。
-    console.error(`[mae-dts-flow] HTTP 面 http://127.0.0.1:${face.port} (mock=${String(config.mock)}, 工号=${config.employeeId})`);
+    console.error(`[mae-dts-flow] HTTP 面 http://127.0.0.1:${face.port} (platform=${config.platform}, 工号=${config.employeeId})`);
   }
 
   if (args.stdio) {
@@ -121,6 +121,7 @@ async function textSelfInfo(service: DtsFlowService): Promise<{
           {
             server: "mae-dts-flow",
             employeeId: summary.employeeId,
+            platform: summary.platform,
             mock: summary.mock,
             dataDir: summary.dataDir,
             issuesRoot: summary.issuesRoot,

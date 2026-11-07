@@ -60,6 +60,9 @@ _Avoid_: 本地缓存、双写
 云平台 ADR-0069 的匿名放行端点集(拉单/详情/绑定读写/模块/人员);未放行时请求 401,mae 显形为 `not_authorized` 并指路,不静默降级。
 _Avoid_: 匿名模式、免鉴权
 
+**MR 平台适配器**:
+产品内具名类,三选一(`platform: mock/github/codehub`,ADR-0002)——决定建 MR 与流水线三态裁决对哪个外部 Git 平台说话;mock=罐头演练,github=外网靶场,codehub=内网 CodeHub。区别于「mock 云平台」(那是单据数据面的替身)。
+
 **mock 云平台**:
 测试夹具(`packages/mae-dts-flow/test/mocks/mockCloudServer.ts`):按平台真实响应形状镜像的本地 HTTP 服务,用于外网全链路验证;区别于服务内置的「本地模拟」网关。
 _Avoid_: 假平台、stub 服务
