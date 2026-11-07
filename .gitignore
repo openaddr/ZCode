@@ -1,3 +1,5 @@
+# mae: 发版锁目录(scripts/mae/release.mjs 的 tmp/release.lock 原子锁,防并行发版挤兑;产物不入库)
+tmp/
 node_modules/
 dist/
 # zcode-server-cli 发行包 staging 输出（spec §7.1），本地组装产物不入库。
