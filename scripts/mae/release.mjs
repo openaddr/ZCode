@@ -181,7 +181,10 @@ export function main(argv) {
     );
   }
   if (!localTag.ok && !run(["git", "tag", tag, maeId]).ok) red("git tag 失败。");
-  if (!run(["git", "push", "origin", `refs/tags/${tag}`], true).ok) {
+  // --no-verify:husky pre-push 钩子的 test:engineering:affected --scope push 要解析
+  // origin/staging 基线——上游 ZCode 分支,mae fork 没有,钩子在结构上过不了(2026-11-07
+  // 首版实录);tag 推送不带新代码,所指提交已经过 PR 门+本地 typecheck/lint/affected。
+  if (!run(["git", "push", "--no-verify", "origin", `refs/tags/${tag}`], true).ok) {
     red("推 tag 失败——修好网络/权限重跑(已做步骤幂等跳过)。");
   }
 
