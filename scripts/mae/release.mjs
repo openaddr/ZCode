@@ -69,6 +69,15 @@ export function readInstallerVersion(latestYmlText) {
   return match ? match[1] : null;
 }
 
+/** origin URL → owner/repo slug(https/ssh 两形态);解析不动返回 null。导出供单测。 */
+export function originSlug(originUrl) {
+  const slug = String(originUrl ?? "")
+    .trim()
+    .replace(/^.*github\.com[:/]/, "")
+    .replace(/\.git$/, "");
+  return /^[\w.-]+\/[\w.-]+$/.test(slug) ? slug : null;
+}
+
 export function main(argv) {
   const args = parseReleaseArgs(argv);
 
@@ -100,6 +109,20 @@ export function main(argv) {
   const remoteTag = run(["git", "ls-remote", "origin", `refs/tags/${tag}`]);
   if (!remoteTag.ok) red(`git ls-remote 失败:${remoteTag.out}`);
   if (remoteTag.out) red(`远端已有 ${tag}——发版前置 PR 先 bump package.json version 再发。`);
+
+  // 3.6) 环境探针(秒级,防「构建 13 分钟后炸在环境形状」——2026-11-07 首版四拦的预演版):
+  //   ①构建步将钉的 System32 tar 在场且自报 bsdtar(#87);②origin slug 可解析(#89);
+  //   ③gh 认证可达目标仓(未登录/改名/断网在构建前显形)。
+  const system32Tar = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe");
+  if (!existsSync(system32Tar)) red(`System32 tar 不在(${system32Tar})——构建步的 bsdtar 钉死会失效。`);
+  const tarVersion = run([system32Tar, "--version"]);
+  if (!/bsdtar/i.test(tarVersion.out)) red(`System32 tar 自报不是 bsdtar:${tarVersion.out.slice(0, 80)}`);
+  const originUrl = run(["git", "remote", "get-url", "origin"]).out;
+  const repoSlug = originSlug(originUrl);
+  if (!repoSlug) red(`origin 仓库解析不动(${originUrl})——人工核对。`);
+  const ghReach = run(["gh", "repo", "view", repoSlug, "--json", "name", "-q", ".name"]);
+  if (!ghReach.ok) red(`gh 达不到 ${repoSlug}(未登录/改名/断网?):${ghReach.out.slice(0, 120)}`);
+
   console.log(
     `[release] 发布目标 mae@origin=${maeId.slice(0, 9)} tag=${tag}${args.draft ? " (draft)" : ""}${args.skipBuild ? " (skip-build,复用已有产物)" : ""}${args.dryRun ? " (dry-run,到此为止)" : ""}`,
   );
@@ -189,12 +212,8 @@ export function main(argv) {
   }
 
   // 6) 发 Release(--generate-notes 按提交史生成 body;润色走 gh release edit)。
-  //    --repo 从 origin 显式解析:gh 全局 default 可能指别处(2026-11-07 首版实录——
+  //    --repo 显式传(探针段已解析 repoSlug):gh 全局 default 可能指别处(2026-11-07 首版实录——
   //    本机 gh default=zai-org/ZCode 上游仓,--verify-tag 靠 tag 不在那边拦下了一场误发)。
-  const originUrl = run(["git", "remote", "get-url", "origin"]).out;
-  const repoSlug = originUrl.replace(/^.*github\.com[:/]/, "").replace(/\.git$/, "");
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repoSlug))
-    red(`origin 仓库解析不动(${originUrl})——人工核对后传参重试。`);
   const ghArgs = [
     "gh", "release", "create", tag, asset,
     "--repo", repoSlug,
