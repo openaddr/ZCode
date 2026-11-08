@@ -72,17 +72,11 @@ export async function main(): Promise<void> {
   if (args.mock) config.platform = "mock";
   await mkdir(config.dataDir, { recursive: true });
 
-  // plugin-host 把 process.argv 改写成 [execPath, server, ...args]:argv[1] 即本文件。
-  // selfLauncher 只物化进问题工作区的项目级 MCP 配置(遗留挂载链,#92 后仅作兜底),
-  // 插件路径本身由宿主 manifest 改写负责,不经这里。
-  const selfEntry = process.argv[1];
+  // 插件路径的 stdio 面由宿主 manifest 改写(__zcode-plugin-host)负责拉起;
+  // selfLauncher 已随 #98 退役(DtsFlowServiceDeps 不再有该字段)——旧的项目级
+  // MCP 配置物化链整段拆除,插件是唯一挂载路。
   const service = createDtsFlowService(config, {
     fetch,
-    selfLauncher: {
-      command: process.execPath,
-      args: [selfEntry, "--stdio"],
-      env: { ELECTRON_RUN_AS_NODE: "1" },
-    },
   });
 
   const handlers: McpFaceHandlers = (() => {
