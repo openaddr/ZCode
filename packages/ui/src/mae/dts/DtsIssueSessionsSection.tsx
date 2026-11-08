@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button.js";
 import { cn } from "@/components/lib/utils.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
-import { dtsStageLabel, useDtsIssues } from "./useDtsIssues.js";
+import { dtsIssueOpeningPrompt, dtsStageLabel, useDtsIssues } from "./useDtsIssues.js";
 
 export interface DtsIssueSessionsSectionProps {
   /** 点击单条:打开/续开该问题工作区的会话(由 shell 提供建会话链路)。 */
@@ -51,7 +51,7 @@ export function DtsIssueSessionsSection(props: DtsIssueSessionsSectionProps) {
                   onClick={() =>
                     props.onCreateIssueSession(
                       issue.workspacePath,
-                      `继续处理 DTS 问题单 ${issue.ticket}:先读工作区 .agents/skills/dts-issue-flow/SKILL.md,再按当前阶段推进。`,
+                      dtsIssueOpeningPrompt(issue.ticket),
                       issue.ticket,
                     )
                   }

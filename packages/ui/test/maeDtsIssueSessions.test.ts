@@ -15,7 +15,8 @@ vi.mock("@/i18n/IntlProvider.js", () => ({
     },
   }),
 }));
-vi.mock("@/mae/dts/useDtsIssues.js", () => ({
+vi.mock("@/mae/dts/useDtsIssues.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/mae/dts/useDtsIssues.js")>()),
   dtsStageLabel: (stage: string) => ({ dts_info: "拉单", fix: "修复" })[stage] ?? stage,
   useDtsIssues: (options: { baseUrl?: string }) => mock.fetchJson(options),
 }));

@@ -1540,3 +1540,9 @@ exceptions:
     paths:
       - packages/ui/src/mae/dts/
     reason: mae fork 定制(specs/mae/dts-flow.md D15):packages/ui/src/mae/dts 是 DTS 问题流 UI 组件的唯一所有者(纯新增,数据经本地服务 HTTP;上游 ui 模块为 legacy 非受管,整体 adopt 不在定制票范围)。
+  # mae: dts-flow 官方插件包(#96,specs/mae/dts-flow.md #93 插件化)——把 packages/mae-dts-flow 的 stdio MCP 面包装成宿主原生插件
+  - id: mae-dts-flow-plugin-unmanaged-files
+    rule: unmanaged-new-file
+    paths:
+      - apps/zcode-cli/packages/dts-flow-plugin/
+    reason: mae fork 定制(specs/mae/dts-flow.md #93 插件化,#96):apps/zcode-cli/packages/dts-flow-plugin 是 dts-flow 官方插件包(纯新增,与 android-emulator 同构;薄适配层 src/mcp/server.ts 只复用 packages/mae-dts-flow 公开出口;位置由 bootstrap 版本对齐测试硬解析决定;zcode-cli 区为 legacy 非受管,整体 adopt 不在定制票范围)。

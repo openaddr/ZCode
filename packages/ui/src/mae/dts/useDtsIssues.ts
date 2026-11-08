@@ -81,7 +81,9 @@ export function useDtsIssues(options: { baseUrl?: string; pollMs?: number } = {}
   return { ...state, issues };
 }
 
-/** 续处理首条:已发起过的单重开时自动发出(#68 发起即开跑;发起首条由建单响应 openingBrief 提供)。 */
+/** 续处理首条:已发起过的单重开时自动发出(#68 发起即开跑;发起首条由建单响应 openingBrief 提供)。
+ *  #98/#93 插件化后不再物化每单 SKILL.md:流程指引改由 dts-flow 插件的 dts-issue-flow 技能全局在场,
+ *  单据上下文经 dts_get_ticket 工具获取,文案只指流程语义,不指工作区文件路径。 */
 export function dtsIssueOpeningPrompt(ticket: string): string {
-  return `继续处理 DTS 问题单 ${ticket}:先读工作区 .agents/skills/dts-issue-flow/SKILL.md,再按当前阶段推进。`;
+  return `继续处理 DTS 问题单 ${ticket}:按 dts-issue-flow 流程推进,先用 dts_get_ticket 获取单据详情与当前阶段,再按当前阶段推进。`;
 }
