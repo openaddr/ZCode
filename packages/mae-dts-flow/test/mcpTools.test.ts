@@ -19,7 +19,7 @@ function buildService(root: string): DtsFlowService {
       platform: "mock",
       pipelineBudgetMinutes: 60,
     },
-    { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },
+    { fetch },
   );
 }
 

@@ -117,11 +117,6 @@ export function createDtsFlowService(config: DtsFlowConfig, deps: DtsFlowService
       const workspace = await initIssueWorkspace({
         issuesRoot: config.issuesRoot,
         ticket: input.ticket,
-        employeeId: config.employeeId,
-        branch: expectedBranch(config.employeeId, input.ticket),
-        selfCommand: deps.selfLauncher.command,
-        selfArgs: deps.selfLauncher.args,
-        ...(deps.selfLauncher.env ? { selfEnv: deps.selfLauncher.env } : {}),
       });
       const detail = input.detail ?? (await getGateway().getTicket(input.ticket));
       const openingBrief = buildOpeningBrief({

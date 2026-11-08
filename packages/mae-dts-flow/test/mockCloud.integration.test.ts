@@ -33,7 +33,7 @@ async function buildCloudModeService() {
       platform: "codehub",
       pipelineBudgetMinutes: 60,
     },
-    { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },
+    { fetch },
   );
   return startHttpFace(service, { port: 0 });
 }
@@ -131,7 +131,7 @@ describe("cloud mode over mock cloud platform", () => {
           platform: "codehub",
           pipelineBudgetMinutes: 60,
         },
-        { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },
+        { fetch },
       );
       const face = await startHttpFace(service, { port: 0 });
       try {

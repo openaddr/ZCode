@@ -109,7 +109,7 @@ describe("mock 全流程 e2e(发起→申报→假流水线绿→收口归档)",
         platform: "mock",
         pipelineBudgetMinutes: 60,
       },
-      { fetch, selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] } },
+      { fetch },
     );
 
     await service.initIssue({ ticket: "DTS-2026-1008" });
