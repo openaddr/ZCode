@@ -17,8 +17,6 @@ export const KNOWN_DEPENDENCIES = ["codehub-cli", "gh"] as const;
 export interface DtsFlowServiceDeps {
   fetch: typeof fetch;
   now?: () => Date;
-  /** 服务自身 stdio 启动命令(物化进工作区项目级 MCP 配置;由 serve 入口提供)。 */
-  selfLauncher: { command: string; args: string[]; env?: Record<string, string> };
   /** 测试注入缝:直接给 MR 平台适配器实例,跳过按 config.platform 构造。 */
   platform?: import("../adapters/platformAdapter.js").PlatformAdapter;
 }
@@ -52,7 +50,7 @@ export interface DtsFlowService {
   /** 人员名单(责任人选择器候选;未放行 fail-loud,UI 退化手输工号)。 */
   listPeople(): Promise<DtsPerson[]>;
   createIssue(input: { ticket: string; interventionTier?: InterventionTier }): Promise<IssueLedger>;
-  /** 发起动作:台账+工作区(repo/、报告模板、项目级 MCP 配置、物化技能)+开场词,一口气(#40 决议 2)。 */
+  /** 发起动作:台账+工作区(repo/、local-logs/、报告模板)+开场词,一口气(#40 决议 2;#98 起 MCP 配置与每单技能退役,约定由开场词自足携带)。 */
   initIssue(input: {
     ticket: string;
     moduleName?: string | null;

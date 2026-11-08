@@ -73,69 +73,15 @@ export function expectedBranch(employeeId: string, ticket: string): string {
   return `master_${employeeId}_${ticket}`;
 }
 
-export function buildMcpConfigJson(
-  selfCommand: string,
-  selfArgs: string[],
-  selfEnv?: Record<string, string>,
-): string {
-  const server: Record<string, unknown> = { type: "stdio", command: selfCommand, args: selfArgs };
-  if (selfEnv !== undefined && Object.keys(selfEnv).length > 0) server["env"] = selfEnv;
-  return `${JSON.stringify({ mcp: { servers: { "dts-flow": server } } }, null, 2)}\n`;
-}
-
-/** 问题工作区一次性物化的产物路径(#40 决议 2)。 */
+/** 问题工作区一次性物化的产物路径(#40 决议 2;#98 起不再含项目级 MCP 配置与每单技能)。 */
 export interface InitWorkspaceResult {
   workspacePath: string;
   analysisReportPath: string;
-  skillPath: string;
-  mcpConfigPath: string;
 }
 
-export interface SkillContext {
-  ticket: string;
-  employeeId: string;
-  branch: string;
-  workspacePath: string;
-  stageGoals: string;
-}
-
-/** 技能动态物化模板(五块:阶段指引/布局/分支与推送/提交与 MR/报告模板)。 */
-export function buildSkillMarkdown(ctx: SkillContext): string {
-  const stageLines = STAGE_REGISTRY.map((spec) => `- ${spec.label}(${spec.stage}):${spec.goal}`).join("\n");
-  return `# dts-issue-flow:DTS 问题单处理流程(单号 ${ctx.ticket})
-
-你正在处理一张 DTS 问题单。全程按阶段推进,阶段真相在 dts-flow 服务台账,你只通过工具推进。
-
-## 阶段与出口
-
-${stageLines}
-
-推进方式:完成阶段目标后调 complete_stage 自报收口;例外——分析阶段以 submit_analysis 为出口(触 发用户确认闸),MR 阶段以 create_mr 建单后 complete_stage 申报 MR 清单。
-
-## 工作区布局
-
-- 工作区根:${ctx.workspacePath}
-- 代码仓克隆放 repo/ 子目录(每仓一个子目录)
-- 日志材料放 local-logs/
-- 分析报告:issue-analysis.md(四章节,submit_analysis 的门票)
-
-## 分支与推送
-
-- 修复分支名固定:${ctx.branch}(工号 ${ctx.employeeId});本地分支名无关,推送用 git push origin HEAD:${ctx.branch}
-- 推送用你自己的 git 环境;不要改工作区配置文件与台账
-
-## 提交与 MR
-
-- 提交格式:[${ctx.ticket}][类型] 描述
-- 建 MR 走 create_mr 工具(服务按期望分支名直建,不要自行调 MR 工具)
-
-## 报告模板
-
-issue-analysis.md 必须含四章节标题:问题现象 / 问题根因 / 修改方案 / 置信度。证据随文标注,置信度如实写局限。
-`;
-}
-
-/** 开场词:单据事实摘要+阶段指引+规范提醒(首条注入,#43 决议 2)。 */
+/** 开场词:单据事实摘要+流程约定(首条注入,#43 决议 2)。
+ *  自足版本(#98,插件化):技能由宿主全局挂载,单号/分支/推送/提交格式等单据级关键约定烤进开场词,
+ *  不再引用每单物化的 SKILL.md。 */
 export function buildOpeningBrief(input: {
   ticket: string;
   title: string;
@@ -145,10 +91,35 @@ export function buildOpeningBrief(input: {
   branch: string;
   interventionTier: string;
 }): string {
+  const stageLines = STAGE_REGISTRY.map((spec) => `- ${spec.label}(${spec.stage}):${spec.goal}`).join("\n");
   return [
     `你正在处理 DTS 问题单 ${input.ticket}:${input.title}(级别:${input.severity})。`,
     `介入档位:${input.interventionTier}。工作区:${input.workspacePath};修复分支:${input.branch}。`,
-    "先读工作区 .agents/skills/dts-issue-flow/SKILL.md 按流程推进;单据描述如下。",
+    "全程按阶段推进,阶段真相在 dts-flow 服务台账,你只通过工具推进;单据描述见文末。",
+    "",
+    "## 阶段与出口",
+    "",
+    stageLines,
+    "",
+    "推进方式:完成阶段目标后调 complete_stage 自报收口;例外——分析阶段以 submit_analysis 为出口(触发用户确认闸),MR 阶段以 create_mr 建单后 complete_stage 申报 MR 清单。",
+    "",
+    "## 工作区布局",
+    "",
+    `- 工作区根:${input.workspacePath}`,
+    "- 代码仓克隆放 repo/ 子目录(每仓一个子目录);日志材料放 local-logs/",
+    "- 分析报告:issue-analysis.md,必须含四章节标题:问题现象 / 问题根因 / 修改方案 / 置信度(submit_analysis 的门票);证据随文标注,置信度如实写局限",
+    "",
+    "## 分支与推送",
+    "",
+    `- 修复分支名固定:${input.branch};本地分支名无关,推送用 git push origin HEAD:${input.branch}`,
+    "- 推送用你自己的 git 环境;不要改工作区配置文件与台账",
+    "",
+    "## 提交与 MR",
+    "",
+    `- 提交格式:[${input.ticket}][类型] 描述`,
+    "- 建 MR 走 create_mr 工具(服务按期望分支名直建,不要自行调 MR 工具)",
+    "",
+    "单据描述如下。",
     "",
     input.description,
   ].join("\n");

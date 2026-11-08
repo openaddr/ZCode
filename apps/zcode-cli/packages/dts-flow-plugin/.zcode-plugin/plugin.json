@@ -1,0 +1,14 @@
+{
+  "name": "dts-flow",
+  "version": "0.1.0",
+  "description": "DTS 问题单本地闭环处理:拉单、分析、修复、MR 验绿的 MCP 四件套工具与流程技能。",
+  "author": { "name": "mae" },
+  "license": "MIT",
+  "skills": "skills",
+  "mcpServers": {
+    "dts-flow": {
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"]
+    }
+  }
+}

@@ -49,20 +49,9 @@ async function main(): Promise<void> {
   if (args.mock) config.platform = "mock";
   await mkdir(config.dataDir, { recursive: true });
 
-  const selfServePath = new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
-  // 打包态自启(dist 产物,由 electron 充当 node):不要 --import tsx(包不在场),
-  // 且 MCP 面以 ELECTRON_RUN_AS_NODE=1 拉起,否则 electron 裸壳会作为第二实例退出(#69 E2E 发现)。
-  const isBundled = /[\\/]dist[\\/]/.test(selfServePath);
-  const selfArgs = isBundled ? [selfServePath, "--stdio"] : ["--import", "tsx", selfServePath, "--stdio"];
-  if (args.config !== undefined) selfArgs.push("--config", args.config);
-  const service = createDtsFlowService(config, {
-    fetch,
-    selfLauncher: {
-      command: process.execPath,
-      args: selfArgs,
-      ...(isBundled ? { env: { ELECTRON_RUN_AS_NODE: "1" } } : {}),
-    },
-  });
+  // 发起动作不再物化项目级 MCP 配置(#98):四件套由宿主插件机制全局挂载(spec #93),
+  // 服务无需再把自己的 stdio 启动命令传给 initIssue。
+  const service = createDtsFlowService(config, { fetch });
   // stdio 面独占进程,不再起 HTTP 面:桌面常驻进程已监听配置端口,stdio 子进程再抢必
   // EADDRINUSE 自杀(打包态首跑发现);台账是文件原子写,双进程经同一份落盘状态收敛。
   const face = args.stdio ? null : await startHttpFace(service, { port: args.port ?? config.httpPort });

@@ -180,6 +180,12 @@ export const OFFICIAL_PLUGIN_DEFINITIONS: readonly OfficialPluginDefinition[] = 
     ],
     version: "0.1.0",
   },
+  // mae: DTS 问题流本地服务官方插件化(#96,包 apps/zcode-cli/packages/dts-flow-plugin,与 android-emulator 同构;商店 listing 随 #97 分发票再加,避免上游 pluginCount 断言漂移)
+  {
+    name: "dts-flow",
+    rootCandidates: ["packages/dts-flow-plugin", "../dts-flow-plugin", "../../dts-flow-plugin", "../../../dts-flow-plugin"],
+    version: "0.1.0",
+  },
   {
     // manifest 只声明 browser-use skill；宿主 node_repl MCP 独立注入，package 另外携带其 server/client
     // runtime 资产。默认启用仅控制「何时/如何用内置浏览器」的 skill 与 browser bridge。

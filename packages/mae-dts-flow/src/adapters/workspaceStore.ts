@@ -1,13 +1,11 @@
-/** 问题工作区存储:发起动作一次性建好 工作区+项目级 MCP 配置+物化技能(#40 决议 2)。 */
+/** 问题工作区存储:发起动作一次性建好 工作区目录+报告模板(#40 决议 2)。
+ *  #98(发起流程切换到插件挂载):不再写项目级 .zcode/config.json 与每单物化技能
+ *  (.agents/skills/dts-issue-flow/SKILL.md)——四件套由宿主插件机制全局挂载(spec #93);
+ *  流程关键约定改由开场词(buildOpeningBrief)自足携带。遗留文件只不写不删,旧工作区兼容。 */
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import {
-  buildAnalysisReportTemplate,
-  buildMcpConfigJson,
-  buildSkillMarkdown,
-  type InitWorkspaceResult,
-} from "../domain/issueFlow.js";
+import { buildAnalysisReportTemplate, type InitWorkspaceResult } from "../domain/issueFlow.js";
 
 export function workspaceDir(issuesRoot: string, ticket: string): string {
   if (!ticket.trim() || ticket.includes("/") || ticket.includes("\\") || ticket.includes("..")) {
@@ -19,13 +17,6 @@ export function workspaceDir(issuesRoot: string, ticket: string): string {
 export interface InitWorkspaceInput {
   issuesRoot: string;
   ticket: string;
-  employeeId: string;
-  branch: string;
-  /** 服务自身 stdio 启动命令(写进项目级 .zcode/config.json,会话自动挂 MCP 面)。 */
-  selfCommand: string;
-  selfArgs: string[];
-  /** 打包态 electron 充当 node 所需的环境注入(缺省不带 env 键)。 */
-  selfEnv?: Record<string, string>;
 }
 
 export async function initIssueWorkspace(input: InitWorkspaceInput): Promise<InitWorkspaceResult> {
@@ -36,24 +27,7 @@ export async function initIssueWorkspace(input: InitWorkspaceInput): Promise<Ini
   const analysisReportPath = path.join(workspacePath, "issue-analysis.md");
   await writeFileIfAbsent(analysisReportPath, buildAnalysisReportTemplate(input.ticket));
 
-  const skillPath = path.join(workspacePath, ".agents", "skills", "dts-issue-flow", "SKILL.md");
-  await fs.mkdir(path.dirname(skillPath), { recursive: true });
-  await writeFileIfAbsent(
-    skillPath,
-    buildSkillMarkdown({
-      ticket: input.ticket,
-      employeeId: input.employeeId,
-      branch: input.branch,
-      workspacePath,
-      stageGoals: "",
-    }),
-  );
-
-  const mcpConfigPath = path.join(workspacePath, ".zcode", "config.json");
-  await fs.mkdir(path.dirname(mcpConfigPath), { recursive: true });
-  await writeFileIfAbsent(mcpConfigPath, buildMcpConfigJson(input.selfCommand, input.selfArgs, input.selfEnv));
-
-  return { workspacePath, analysisReportPath, skillPath, mcpConfigPath };
+  return { workspacePath, analysisReportPath };
 }
 
 async function writeFileIfAbsent(file: string, content: string): Promise<void> {

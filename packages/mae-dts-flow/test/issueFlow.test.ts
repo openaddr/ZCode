@@ -5,9 +5,7 @@ import {
   STAGE_REGISTRY,
   answerAnalysisGate,
   buildAnalysisReportTemplate,
-  buildMcpConfigJson,
   buildOpeningBrief,
-  buildSkillMarkdown,
   expectedBranch,
   isToolAllowed,
   raiseAnalysisGate,
@@ -75,31 +73,7 @@ describe("materialization templates", () => {
     expect(expectedBranch("ning", "DTS-2026-1008")).toBe("master_ning_DTS-2026-1008");
   });
 
-  it("项目级 MCP 配置形状:.zcode/config.json → mcp.servers[].{type,command,args}", () => {
-    const json = buildMcpConfigJson("node", ["serve.ts", "--stdio"]);
-    const parsed = JSON.parse(json) as { mcp: { servers: Record<string, { type: string; command: string; args: string[] }> } };
-    const server = parsed.mcp.servers["dts-flow"];
-    expect(server.type).toBe("stdio");
-    expect(server.args).toContain("--stdio");
-  });
-
-  it("技能物化含单号/工号/分支/四章节/阶段清单", () => {
-    const md = buildSkillMarkdown({
-      ticket: "DTS-2026-1008",
-      employeeId: "ning",
-      branch: "master_ning_DTS-2026-1008",
-      workspacePath: "/ws",
-      stageGoals: "",
-    });
-    expect(md).toContain("DTS-2026-1008");
-    expect(md).toContain("master_ning_DTS-2026-1008");
-    expect(md).toContain("git push origin HEAD:master_ning_DTS-2026-1008");
-    expect(md).toContain("问题现象");
-    expect(md).toContain("complete_stage");
-    expect(md).toContain("submit_analysis");
-  });
-
-  it("开场词含单据事实/档位/分支", () => {
+  it("开场词自足:单据事实/档位/工作区/分支/推送/提交格式/阶段出口/报告要求齐备,不引用物化技能(#98)", () => {
     const brief = buildOpeningBrief({
       ticket: "DTS-2026-1008",
       title: "集群 OOM",
@@ -109,9 +83,25 @@ describe("materialization templates", () => {
       branch: "master_ning_DTS-2026-1008",
       interventionTier: "align_first",
     });
+    // 单据事实与档位。
     expect(brief).toContain("DTS-2026-1008");
     expect(brief).toContain("集群 OOM");
     expect(brief).toContain("致命");
     expect(brief).toContain("align_first");
+    // 工作区与分支契约(原烤在技能里的关键约定,现烤进开场词)。
+    expect(brief).toContain("/ws");
+    expect(brief).toContain("master_ning_DTS-2026-1008");
+    expect(brief).toContain("git push origin HEAD:master_ning_DTS-2026-1008");
+    expect(brief).toContain("[DTS-2026-1008][");
+    // 工作区布局与报告门票。
+    expect(brief).toContain("issue-analysis.md");
+    expect(brief).toContain("问题现象");
+    // 阶段推进出口(工具语义引导)。
+    expect(brief).toContain("complete_stage");
+    expect(brief).toContain("submit_analysis");
+    expect(brief).toContain("create_mr");
+    // 技能不再物化:开场词不得再指向每单 SKILL.md。
+    expect(brief).not.toContain(".agents");
+    expect(brief).not.toContain("SKILL.md");
   });
 });

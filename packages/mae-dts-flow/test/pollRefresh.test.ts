@@ -66,11 +66,7 @@ describe("pollTickets 红灯可刷新(#73 回归)", () => {
         platform: "codehub",
         pipelineBudgetMinutes: 60,
       },
-      {
-        fetch,
-        selfLauncher: { command: "node", args: ["serve.ts", "--stdio"] },
-        platform: scripted,
-      },
+      { fetch, platform: scripted },
     );
 
     await mkdir(path.join(dataDir, "issues", "DTS-2026-9001"), { recursive: true });
