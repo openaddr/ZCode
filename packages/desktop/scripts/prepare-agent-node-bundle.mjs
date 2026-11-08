@@ -110,6 +110,15 @@ const officialPluginPackages = [
     stagedPath: "packages/android-emulator-plugin",
   },
   {
+    // mae: dts-flow 官方插件(#96,包 apps/zcode-cli/packages/dts-flow-plugin;dist 为 esbuild 单文件 main() 入口,#95 spike 形状)
+    packageName: "@mae/dts-flow-plugin",
+    relativePath: "apps/zcode-cli/packages/dts-flow-plugin",
+    requiresRuntime: true,
+    requiredRuntimePaths: ["dist/mcp/server.js"],
+    runtimeBuildScript: "scripts/build-mcp.mjs",
+    stagedPath: "packages/dts-flow-plugin",
+  },
+  {
     packageName: "@zcode/documents-plugin",
     relativePath: "apps/zcode-cli/packages/documents-plugin",
     requiresRuntime: true,
