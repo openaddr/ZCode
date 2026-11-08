@@ -614,7 +614,8 @@ describe("ZCode plugins", () => {
             id: "zcode-plugins-official",
             isOfficial: true,
             name: "zcode-plugins-official",
-            pluginCount: 15,
+            // mae: dts-flow 官方插件注册(#96)使官方市场条目 15→16(countVisibleMarketplacePlugins 仅按名排除 node-repl-host)
+            pluginCount: 16,
             source: {
               source: "url",
               url: "https://cdn-zcode.z.ai/zcode/official-plugin/marketplace.json",
@@ -2395,7 +2396,8 @@ describe("ZCode plugins", () => {
       expect(
         overview.marketplaces.find((marketplace) => marketplace.id === "zcode-plugins-official"),
       ).toMatchObject({
-        pluginCount: 15,
+        // mae: dts-flow 官方插件注册(#96)使官方市场条目 15→16
+        pluginCount: 16,
         source: {
           source: "url",
           url: "https://cdn-zcode.z.ai/zcode/official-plugin/marketplace.json",
